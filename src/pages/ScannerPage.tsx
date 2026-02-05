@@ -199,13 +199,14 @@ export default function ScannerPage() {
 
   const handleCreateNewProduct = async (barcode: string) => {
     try {
-      const productData = {
-        barcode: barcode,
-        name: `Producto ${barcode}`,
-        quantity: 1,
-        category: 'General',
-        shipmentId: selectedShipment!.id
-      };
+      // SOLUCIÓN: productData no se usa, así que lo eliminamos y usamos los valores directamente
+      // const productData = {
+      //   barcode: barcode,
+      //   name: `Producto ${barcode}`,
+      //   quantity: 1,
+      //   category: 'General',
+      //   shipmentId: selectedShipment!.id
+      // };
       
       // Simular creación de producto (sin llamada API real)
       const mockResponse = {
@@ -237,16 +238,6 @@ export default function ScannerPage() {
       alert(error.response?.data?.message || 'Error creando producto');
     }
   };
-
-  // REMOVIDA: handleLinkToProduct no se usa en el código actual
-  // const handleLinkToProduct = async (barcode: string, productId: number) => {
-  //   const product = products.find(p => p.id === productId);
-  //   if (!product) return;
-  //   
-  //   updateScannedItemStatus(barcode, 'linked', `Vinculado a: ${product.name}`, product.id, product.name);
-  //   updateProductScannedQuantity(productId);
-  //   alert(`✅ Código vinculado a: ${product.name}`);
-  // };
 
   const handleCreateSuccess = async (newShipment: any) => {
     const shipment = extractShipmentFromResponse(newShipment);

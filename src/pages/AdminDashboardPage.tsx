@@ -61,6 +61,7 @@ interface DashboardStats {
   }>;
 }
 
+// MANTENEMOS la interfaz pero la USAMOS para que no dé error
 interface QuickStats {
   today: {
     shipments: number;
@@ -76,6 +77,7 @@ interface QuickStats {
 export default function AdminDashboardPage() {
   const { token, logout } = useAuth(); // Obtener token del contexto (removido 'user' que no se usaba)
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [quickStats, setQuickStats] = useState<QuickStats | null>(null); // MANTENEMOS el estado
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,10 +103,10 @@ export default function AdminDashboardPage() {
         }
       }
       
-      // Llamar a las dos APIs en paralelo CON TOKEN
-      const [dashboardResponse] = await Promise.all([
+      // Llamar a las dos APIs en paralelo CON TOKEN - MANTENEMOS AMBAS
+      const [dashboardResponse, quickStatsResponse] = await Promise.all([
         fetch('/api/admin/dashboard/stats', { headers }),
-        // Removida la segunda llamada ya que quickStats no se usaba
+        fetch('/api/admin/stats/quick', { headers }) // MANTENEMOS esta llamada
       ]);
 
       if (!dashboardResponse.ok) {
@@ -117,8 +119,17 @@ export default function AdminDashboardPage() {
         throw new Error(`Error dashboard: ${dashboardResponse.status}`);
       }
 
+      if (!quickStatsResponse.ok) {
+        console.warn('No se pudieron obtener estadísticas rápidas');
+      }
+
       const dashboardData = await dashboardResponse.json();
+      const quickStatsData = quickStatsResponse.ok 
+        ? await quickStatsResponse.json()
+        : null;      
+      
       setStats(dashboardData);
+      setQuickStats(quickStatsData); // MANTENEMOS la actualización
       
     } catch (err: any) {
       console.error('Error fetching admin stats:', err);
@@ -158,12 +169,19 @@ export default function AdminDashboardPage() {
       s.status.toLowerCase().includes('preparing')
     )?.count || 0;
 
-    // Escaneos hoy
-    const today = new Date().toISOString().split('T')[0];
-    const todayActivity = stats.dailyActivity.find(activity => 
-      activity.date.split('T')[0] === today
-    );
-    const dailyScans = todayActivity?.productsScanned || 0;
+    // Escaneos hoy - USAMOS quickStats si está disponible
+    let dailyScans = 0;
+    
+    if (quickStats?.today?.productsScanned) {
+      dailyScans = quickStats.today.productsScanned;
+    } else {
+      // Fallback a stats.dailyActivity
+      const today = new Date().toISOString().split('T')[0];
+      const todayActivity = stats.dailyActivity.find(activity => 
+        activity.date.split('T')[0] === today
+      );
+      dailyScans = todayActivity?.productsScanned || 0;
+    }
 
     // Crecimiento (comparar con ayer)
     const yesterday = new Date();
@@ -187,6 +205,11 @@ export default function AdminDashboardPage() {
       transportCompanies: stats.topTransportCompanies.length,
       dailyScans,
       growthRate: parseFloat(growthRate),
+      // Añadimos datos de quickStats si están disponibles
+      todayShipments: quickStats?.today?.shipments || 0,
+      activeUsersCount: quickStats?.system?.activeUsers || stats.summary.totalUsersActive,
+      pendingShipmentsCount: quickStats?.system?.pendingShipments || pendingShipments,
+      inProgressShipmentsCount: quickStats?.system?.inProgressShipments || activeShipments
     };
   };
 
@@ -282,7 +305,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Estadísticas principales */}
+      {/* Estadísticas principales - USAMOS quickStats donde sea relevante */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Usuarios */}
         <div className="bg-white rounded-xl border p-6 shadow-sm">
@@ -298,11 +321,11 @@ export default function AdminDashboardPage() {
               {derivedStats?.growthRate && derivedStats.growthRate > 0 ? '+' : ''}{derivedStats?.growthRate}%
             </span>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900">{derivedStats?.totalUsers || 0}</h3>
+          <h3 className="text-2xl font-bold text-gray-900">{derivedStats?.activeUsersCount || derivedStats?.totalUsers || 0}</h3>
           <p className="text-gray-500">Usuarios Activos</p>
           <div className="mt-2 flex items-center gap-2 text-sm">
             <UserCheck className="w-4 h-4 text-green-500" />
-            <span className="text-green-600">{stats?.summary.totalUsersActive || 0} activos hoy</span>
+            <span className="text-green-600">{derivedStats?.activeUsersCount || stats?.summary.totalUsersActive || 0} activos hoy</span>
           </div>
         </div>
 
@@ -317,7 +340,7 @@ export default function AdminDashboardPage() {
                 {derivedStats?.completedShipments || 0}
               </span>
               <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {derivedStats?.activeShipments || 0}
+                {derivedStats?.inProgressShipmentsCount || derivedStats?.activeShipments || 0}
               </span>
             </div>
           </div>
@@ -326,7 +349,7 @@ export default function AdminDashboardPage() {
           <div className="mt-2 text-sm text-gray-600">
             <span className="text-green-600">{derivedStats?.completedShipments || 0} completados</span>
             {' • '}
-            <span className="text-blue-600">{derivedStats?.activeShipments || 0} activos</span>
+            <span className="text-blue-600">{derivedStats?.inProgressShipmentsCount || derivedStats?.activeShipments || 0} activos</span>
           </div>
         </div>
 
