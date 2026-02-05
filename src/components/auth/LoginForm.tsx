@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-hot-toast';
-import { LogIn, AlertCircle, Eye, EyeOff, ShieldAlert, WifiOff } from 'lucide-react';
+// import { toast } from 'react-hot-toast'; // Eliminado porque no se usa
+import { LogIn, Eye, EyeOff, ShieldAlert } from 'lucide-react'; // Eliminados AlertCircle y WifiOff
 
 export default function LoginForm() {
   const [username, setUsername] = useState('');
@@ -35,13 +35,16 @@ export default function LoginForm() {
     try {
       console.log('🔐 Login con:', username);
       
-      const response = await fetch('http://localhost:5034/api/Auth/login', {
+      const response = await fetch('https://barcodeverify-backend.onrender.com/api/auth/login', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ 
+          email: username,  // Tu backend espera 'email', no 'username'
+          password 
+        })
       });
 
       const data = await response.json();
@@ -100,7 +103,7 @@ export default function LoginForm() {
       const roleIcon = data.user.role === 'Admin' ? '👑' : '👤';
       const roleText = data.user.role === 'Admin' ? 'Administrador' : 'Usuario';
       
-      alert(`✅ ¡Bienvenido ${data.user.username}!\n\nRol: ${roleIcon} ${roleText}\n\nRedirigiendo...`);
+      alert(`✅ ¡Bienvenido ${data.user.name || data.user.username}!\n\nRol: ${roleIcon} ${roleText}\n\nRedirigiendo...`);
       
       // Redirigir después de 500ms para que se vea el alert
       setTimeout(() => {
@@ -121,7 +124,7 @@ export default function LoginForm() {
       
       if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
         errorTitle = 'Servidor no disponible';
-        errorMessage = 'No se puede contactar al servidor en http://localhost:5034\n\nAsegúrate de que el backend esté corriendo.';
+        errorMessage = 'No se puede contactar al servidor en https://barcodeverify-backend.onrender.com\n\nAsegúrate de que el backend esté desplegado.';
         errorIcon = '🔌';
       }
       
@@ -134,6 +137,7 @@ export default function LoginForm() {
       setLoading(false);
     }
   };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Mensaje de error persistente */}
@@ -152,7 +156,7 @@ export default function LoginForm() {
       {/* Campo usuario */}
       <div>
         <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-          Usuario
+          Email / Usuario
         </label>
         <input
           id="username"
@@ -163,7 +167,7 @@ export default function LoginForm() {
             if (error) setError('');
           }}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-100"
-          placeholder="Ingresa tu usuario asignado"
+          placeholder="Ingresa tu email asignado"
           disabled={loading}
           autoComplete="username"
           autoFocus

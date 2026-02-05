@@ -18,7 +18,7 @@ interface BarcodeScannerProps {
 export default function BarcodeScanner({ onScan, shipmentId }: BarcodeScannerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const barcodeBuffer = useRef('');
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<number | undefined>(undefined); // Cambiado de NodeJS.Timeout
   const lastScannedRef = useRef('');
   const lastScannedTimeRef = useRef(0);
   
@@ -126,7 +126,7 @@ export default function BarcodeScanner({ onScan, shipmentId }: BarcodeScannerPro
           clearTimeout(timeoutRef.current);
         }
         
-        timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = window.setTimeout(() => { // Usar window.setTimeout
           if (barcodeBuffer.current.length >= 4) {
             processBarcode(barcodeBuffer.current);
           }

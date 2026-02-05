@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Package, Truck, Play, RefreshCw, AlertCircle, CheckCircle, XCircle, Filter, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { shipmentService } from '../../services/api';
-import { toast } from 'react-hot-toast';
+// import { toast } from 'react-hot-toast'; // Eliminado si no se usa
 import './ActiveShipments.css';
 
 type ShipmentStatus = 'Pending' | 'InProgress' | 'Completed' | 'Cancelled';
@@ -23,12 +23,12 @@ interface Shipment {
 
 interface ActiveShipmentsProps {
   onSelectShipment: (shipmentId: number, shipmentNumber: string) => void;
-  onRefresh?: () => void;
+  // onRefresh?: () => void; // Eliminado porque no se usa
   showAll?: boolean;
   showFilters?: boolean;
 }
 
-export default function ActiveShipments({ onSelectShipment, onRefresh, showAll = false, showFilters = true }: ActiveShipmentsProps) {
+export default function ActiveShipments({ onSelectShipment, showAll = false, showFilters = true }: ActiveShipmentsProps) {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,59 +41,56 @@ export default function ActiveShipments({ onSelectShipment, onRefresh, showAll =
       setLoading(true);
       setError(null);
       
-      let response;
+      let data;
       
       if (showAll) {
         try {
-          response = await shipmentService.getAll();
+          const response = await shipmentService.getAll();
+          data = response;
         } catch (error) {
           console.log('getAll no disponible, usando getActive como fallback');
-          response = await shipmentService.getActive();
+          const response = await shipmentService.getActive();
+          data = response;
         }
       } else {
-        response = await shipmentService.getActive();
+        const response = await shipmentService.getActive();
+        data = response;
       }
       
-      if (!response) {
+      if (!data) {
         setShipments([]);
         return;
       }
       
-      let data = response;
-      
       // Normalizar datos
-      if (Array.isArray(response)) {
-        data = response;
-      } else if (response.data && Array.isArray(response.data)) {
-        data = response.data;
-      } else if (response.shipments && Array.isArray(response.shipments)) {
-        data = response.shipments;
-      } else if (response && typeof response === 'object') {
-        data = [response];
-      } else {
-        data = [];
-      }
+      let normalizedData: any[] = [];
       
       if (Array.isArray(data)) {
-        // Filtrar para asegurar que solo tengamos estados válidos
-        const validShipments = data.filter((shipment: any) => 
-          shipment && 
-          shipment.id && 
-          shipment.shipmentNumber &&
-          ['Pending', 'InProgress', 'Completed', 'Cancelled'].includes(shipment.status)
-        );
-        
-        // Ordenar por fecha (más reciente primero)
-        const sortedData = validShipments.sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        
-        setShipments(sortedData);
-        
+        normalizedData = data;
+      } else if (data.data && Array.isArray(data.data)) {
+        normalizedData = data.data;
+      } else if (data.shipments && Array.isArray(data.shipments)) {
+        normalizedData = data.shipments;
+      } else if (data && typeof data === 'object') {
+        normalizedData = [data];
       } else {
-        setShipments([]);
-        toast.error('Formato de datos inválido');
+        normalizedData = [];
       }
+      
+      // Filtrar para asegurar que solo tengamos estados válidos
+      const validShipments = normalizedData.filter((shipment: any) => 
+        shipment && 
+        shipment.id && 
+        shipment.shipmentNumber &&
+        ['Pending', 'InProgress', 'Completed', 'Cancelled'].includes(shipment.status)
+      );
+      
+      // Ordenar por fecha (más reciente primero)
+      const sortedData = validShipments.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setShipments(sortedData);
       
     } catch (error: any) {
       console.error('Error cargando envíos:', error);
@@ -111,9 +108,10 @@ export default function ActiveShipments({ onSelectShipment, onRefresh, showAll =
       setError(errorMessage);
       setShipments([]);
       
-      if (error.response?.status === 401) {
-        toast.error('Sesión expirada. Por favor inicia sesión nuevamente.');
-      }
+      // Solo mostrar toast si el componente toast está disponible
+      // if (error.response?.status === 401 && typeof toast !== 'undefined') {
+      //   toast.error('Sesión expirada. Por favor inicia sesión nuevamente.');
+      // }
       
     } finally {
       setLoading(false);
@@ -126,12 +124,22 @@ export default function ActiveShipments({ onSelectShipment, onRefresh, showAll =
 
   const handleStartScanning = async (shipmentId: number, shipmentNumber: string) => {
     try {
-      const response = await shipmentService.start(shipmentNumber);
-      toast.success(`Escaneo iniciado para ${shipmentNumber}`);
+      await shipmentService.start(shipmentNumber);
+      // Mostrar mensaje de éxito si toast está disponible
+      // if (typeof toast !== 'undefined') {
+      //   toast.success(`Escaneo iniciado para ${shipmentNumber}`);
+      // } else {
+      alert(`Escaneo iniciado para ${shipmentNumber}`);
+      // }
       onSelectShipment(shipmentId, shipmentNumber);
       loadShipments();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error iniciando escaneo');
+      const errorMsg = error.response?.data?.message || 'Error iniciando escaneo';
+      // if (typeof toast !== 'undefined') {
+      //   toast.error(errorMsg);
+      // } else {
+      alert(errorMsg);
+      // }
     }
   };
 
@@ -142,10 +150,20 @@ export default function ActiveShipments({ onSelectShipment, onRefresh, showAll =
     
     try {
       const response = await shipmentService.cancel(shipmentId);
-      toast.success(response.message || 'Envío cancelado exitosamente');
+      // Mostrar éxito
+      // if (typeof toast !== 'undefined') {
+      //   toast.success(response.message || 'Envío cancelado exitosamente');
+      // } else {
+      alert(response.message || 'Envío cancelado exitosamente');
+      // }
       await loadShipments();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error cancelando envío');
+      const errorMsg = error.response?.data?.message || 'Error cancelando envío';
+      // if (typeof toast !== 'undefined') {
+      //   toast.error(errorMsg);
+      // } else {
+      alert(errorMsg);
+      // }
     }
   };
 
