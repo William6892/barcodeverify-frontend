@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authService } from '../../services/api'; // ✅ Importar authService
+import { authService } from '../../services/api';
 import { LogIn, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
 export default function LoginForm() {
@@ -34,7 +34,6 @@ export default function LoginForm() {
     try {
       console.log('🔐 Login con username:', username);
       
-      // ✅ USAR authService EN LUGAR DE fetch DIRECTO
       const response = await authService.login({
         username: username,
         password: password
@@ -42,30 +41,25 @@ export default function LoginForm() {
       
       console.log('✅ Login exitoso:', response);
       
-      // Validar estructura de respuesta
       if (!response.token || !response.user) {
         console.error('❌ Respuesta incompleta:', response);
         setError('Respuesta del servidor inválida');
-        alert('⚠️ Respuesta inválida del servidor');
         return;
       }
       
-      // Guardar datos
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
       
-      // Actualizar contexto de autenticación
       login(response.user, response.token);
       
-      // Mensaje de éxito
+      // CORREGIDO: roleIcon se usa en el console.log
       const roleIcon = response.user.role === 'Admin' ? '👑' : 
                       response.user.role === 'Scanner' ? '📱' : '👤';
       const roleText = response.user.role === 'Admin' ? 'Administrador' : 
                       response.user.role === 'Scanner' ? 'Escáner' : 'Usuario';
       
-      console.log(`✅ ¡Bienvenido ${response.user.username}! Rol: ${roleText}`);
+      console.log(`✅ ¡Bienvenido ${response.user.username}! Rol: ${roleIcon} ${roleText}`);
       
-      // Redirigir inmediatamente (sin alert)
       if (response.user.role === 'Admin') {
         navigate('/admin');
       } else {
@@ -75,7 +69,6 @@ export default function LoginForm() {
     } catch (error: any) {
       console.error('❌ Error en login:', error);
       
-      // Manejar errores de authService
       let errorMessage = 'Error al iniciar sesión';
       
       if (error.response) {
@@ -109,7 +102,6 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Mensaje de error persistente */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg animate-fadeIn shadow-sm">
           <div className="flex items-start gap-3">
@@ -122,7 +114,6 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* Campo usuario */}
       <div>
         <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
           Usuario
@@ -143,7 +134,6 @@ export default function LoginForm() {
         />
       </div>
 
-      {/* Campo contraseña */}
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
           Contraseña
@@ -175,7 +165,6 @@ export default function LoginForm() {
         </div>
       </div>
 
-      {/* Botón de login */}
       <div>
         <button
           type="submit"
@@ -196,7 +185,6 @@ export default function LoginForm() {
         </button>
       </div>
 
-      {/* Información de prueba */}
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
         <p className="font-semibold">💡 Credenciales de prueba:</p>
         <p>Usuario: <span className="font-mono">angie</span></p>
