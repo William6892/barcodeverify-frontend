@@ -5,7 +5,7 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'https://barcodeverify-backend.onrender.com';
 
 export const api = axios.create({
-  baseURL: API_URL,  // Así está bien
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -112,16 +112,43 @@ export interface Product {
 }
 
 // ============================
-// SERVICIOS DE AUTENTICACIÓN - ✅ SIN CAMBIOS
+// SERVICIOS DE AUTENTICACIÓN - ✅ CORREGIDO
 // ============================
 
 export const authService = {
   login: async (credentials: { username: string; password: string }) => {
-    const response = await api.post('/api/auth/login', {
-      email: credentials.username,  // Tu backend usa 'email'
-      password: credentials.password
-    });
-    return response.data;
+    try {
+      console.log('📤 Enviando login:', { username: credentials.username });
+      const response = await api.post('/api/auth/login', {
+        username: credentials.username,  // ✅ CORREGIDO: "username" no "email"
+        password: credentials.password
+      });
+      console.log('✅ Login exitoso');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error en login:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+  
+  register: async (data: {
+    username: string;
+    email: string;
+    password: string;
+    role?: 'User' | 'Admin' | 'Scanner';
+  }) => {
+    try {
+      const response = await api.post('/api/auth/register', {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        role: data.role || 'User'
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error en registro:', error.response?.data || error.message);
+      throw error;
+    }
   },
   
   logout: () => {
@@ -145,7 +172,7 @@ export const authService = {
 };
 
 // ============================
-// SERVICIOS DE ENVÍOS (SHIPMENTS) - ✅ SIN CAMBIOS
+// SERVICIOS DE ENVÍOS (SHIPMENTS)
 // ============================
 
 export const shipmentService = {
@@ -234,7 +261,7 @@ export const shipmentService = {
 };
 
 // ============================
-// SERVICIOS DE PRODUCTOS - ✅ SIN CAMBIOS
+// SERVICIOS DE PRODUCTOS
 // ============================
 
 export const productService = {
@@ -254,7 +281,7 @@ export const productService = {
     return response.data;
   },
   
-  // ✅ NUEVO: Crear producto para envío (sin requerir Admin)
+  // Crear producto para envío
   createForShipment: async (data: {
     barcode: string;
     name: string;
@@ -262,17 +289,13 @@ export const productService = {
     category?: string;
     shipmentId: number;
   }) => {
-    console.log('📤 [productService] Enviando a /api/products/create-for-shipment:', data);
+    console.log('📤 [productService] Enviando:', data);
     try {
       const response = await api.post('/api/products/create-for-shipment', data);
-      console.log('✅ [productService] Respuesta recibida:', response.data);
+      console.log('✅ [productService] Respuesta recibida');
       return response.data;
     } catch (error: any) {
-      console.error('❌ [productService] Error en createForShipment:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
+      console.error('❌ [productService] Error:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -339,7 +362,7 @@ export const productService = {
 };
 
 // ============================
-// SERVICIOS DE TRANSPORTADORAS - ✅ SIN CAMBIOS
+// SERVICIOS DE TRANSPORTADORAS
 // ============================
 
 export const transportService = {
@@ -387,18 +410,18 @@ export const transportService = {
     return response.data;
   },
   
-  // Alias para crear (usa la versión user por defecto)
+  // Alias para crear
   create: async (data: any) => {
     return await transportService.createForUser(data);
   },
 };
 
 // ============================
-// SERVICIOS DE ADMINISTRACIÓN - ✅ SIN CAMBIOS
+// SERVICIOS DE ADMINISTRACIÓN
 // ============================
 
 export const adminService = {
-  // ===== DASHBOARD =====
+  // Dashboard
   getDashboardStats: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
@@ -413,7 +436,7 @@ export const adminService = {
     return response.data;
   },
   
-  // ===== USUARIOS =====
+  // Usuarios
   getUsers: async () => {
     const response = await api.get('/api/admin/users');
     return response.data;
@@ -434,7 +457,7 @@ export const adminService = {
     return response.data;
   },
   
-  // ===== TRANSPORTADORAS =====
+  // Transportadoras
   getTransportCompanies: async () => {
     const response = await api.get('/api/admin/transport-companies');
     return response.data;
@@ -450,7 +473,7 @@ export const adminService = {
     return response.data;
   },
   
-  // ===== PRODUCTOS =====
+  // Productos
   searchProducts: async (params: {
     barcode?: string;
     name?: string;
@@ -464,7 +487,7 @@ export const adminService = {
     return response.data;
   },
   
-  // ===== REPORTES =====
+  // Reportes
   generateShipmentReport: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
@@ -476,14 +499,12 @@ export const adminService = {
 };
 
 // ============================
-// SERVICIO COMPLETO PARA USERS MANAGEMENT - ✅ SIN CAMBIOS
+// SERVICIO PARA USERS MANAGEMENT
 // ============================
 
 export const userManagementService = {
-  // Obtener todos los usuarios
   getUsers: adminService.getUsers,
   
-  // Crear usuario
   createUser: async (userData: {
     username: string;
     email: string;
@@ -494,31 +515,27 @@ export const userManagementService = {
     return response.data;
   },
   
-  // Actualizar rol de usuario
   updateUserRole: async (userId: number, role: 'User' | 'Admin' | 'Scanner') => {
     const response = await api.put(`/api/admin/users/${userId}/role`, { role });
     return response.data;
   },
   
-  // Actualizar estado de usuario
   updateUserStatus: async (userId: number, isActive: boolean) => {
     const response = await api.put(`/api/admin/users/${userId}/status`, { isActive });
     return response.data;
   },
   
-  // Activar usuario
   activateUser: async (userId: number) => {
     return adminService.updateUserStatus(userId, true);
   },
   
-  // Desactivar usuario
   deactivateUser: async (userId: number) => {
     return adminService.updateUserStatus(userId, false);
   },
 };
 
 // ============================
-// FUNCIÓN PARA MANEJAR ERRORES - ✅ SIN CAMBIOS
+// FUNCIÓN PARA MANEJAR ERRORES
 // ============================
 
 export const handleApiError = (error: any): string => {
@@ -552,16 +569,14 @@ export const handleApiError = (error: any): string => {
 };
 
 // ============================
-// FUNCIONES UTILES - ✅ SIN CAMBIOS
+// FUNCIONES UTILES
 // ============================
 
-// Función para formatear fechas a hora Colombia
 export const formatToColombiaTime = (dateString: string): string => {
   if (!dateString) return 'Nunca';
   
   try {
     const date = new Date(dateString);
-    
     return date.toLocaleString('es-CO', {
       timeZone: 'America/Bogota',
       year: 'numeric',
@@ -578,7 +593,6 @@ export const formatToColombiaTime = (dateString: string): string => {
   }
 };
 
-// Función para formatear fecha relativa
 export const formatRelativeTime = (dateString: string): string => {
   if (!dateString) return 'Nunca';
   

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-// import { toast } from 'react-hot-toast'; // Eliminado porque no se usa
-import { LogIn, Eye, EyeOff, ShieldAlert } from 'lucide-react'; // Eliminados AlertCircle y WifiOff
+import { authService } from '../../services/api'; // ✅ Importar authService
+import { LogIn, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
 export default function LoginForm() {
   const [username, setUsername] = useState('');
@@ -17,7 +17,6 @@ export default function LoginForm() {
     e.preventDefault();
     setError('');
     
-    // Validaciones con feedback visual
     if (!username.trim()) {
       setError('Por favor ingresa tu usuario');
       document.getElementById('username')?.focus();
@@ -33,104 +32,74 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      console.log('🔐 Login con:', username);
+      console.log('🔐 Login con username:', username);
       
-      const response = await fetch('https://barcodeverify-backend.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          email: username,  // Tu backend espera 'email', no 'username'
-          password 
-        })
+      // ✅ USAR authService EN LUGAR DE fetch DIRECTO
+      const response = await authService.login({
+        username: username,
+        password: password
       });
-
-      const data = await response.json();
       
-      if (!response.ok) {
-        // ERRORES específicos con iconos
-        let errorTitle = 'Error';
-        let errorMessage = 'Error del servidor';
-        let errorIcon = '❌';
-        
-        if (response.status === 401) {
-          errorTitle = 'Credenciales incorrectas';
-          errorMessage = 'El usuario o contraseña son incorrectos. Verifica e intenta de nuevo.';
-          errorIcon = '🔐';
-        } else if (response.status === 400) {
-          errorTitle = 'Datos inválidos';
-          errorMessage = data?.message || 'Los datos enviados son inválidos.';
-          errorIcon = '📝';
-        } else if (response.status === 403) {
-          errorTitle = 'Acceso denegado';
-          errorMessage = 'Tu cuenta está desactivada. Contacta al administrador.';
-          errorIcon = '🚫';
-        } else if (response.status === 404) {
-          errorTitle = 'Usuario no encontrado';
-          errorMessage = 'El usuario no existe en el sistema.';
-          errorIcon = '👤';
-        } else if (response.status === 500) {
-          errorTitle = 'Error del servidor';
-          errorMessage = 'Problema interno del servidor. Intenta más tarde.';
-          errorIcon = '⚙️';
-        }
-        
-        // Mostrar alert personalizado
-        alert(`${errorIcon} ${errorTitle}\n\n${errorMessage}`);
-        
-        setError(errorMessage);
-        setPassword('');
-        return;
-      }
+      console.log('✅ Login exitoso:', response);
       
-      // ÉXITO - Validar estructura
-      if (!data.token || !data.user) {
-        alert('⚠️ Respuesta inválida\n\nEl servidor devolvió una respuesta incompleta.');
+      // Validar estructura de respuesta
+      if (!response.token || !response.user) {
+        console.error('❌ Respuesta incompleta:', response);
         setError('Respuesta del servidor inválida');
+        alert('⚠️ Respuesta inválida del servidor');
         return;
       }
       
       // Guardar datos
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
       
-      // Actualizar contexto
-      login(data.user, data.token);
+      // Actualizar contexto de autenticación
+      login(response.user, response.token);
       
-      // Mensaje de éxito personalizado
-      const roleIcon = data.user.role === 'Admin' ? '👑' : '👤';
-      const roleText = data.user.role === 'Admin' ? 'Administrador' : 'Usuario';
+      // Mensaje de éxito
+      const roleIcon = response.user.role === 'Admin' ? '👑' : 
+                      response.user.role === 'Scanner' ? '📱' : '👤';
+      const roleText = response.user.role === 'Admin' ? 'Administrador' : 
+                      response.user.role === 'Scanner' ? 'Escáner' : 'Usuario';
       
-      alert(`✅ ¡Bienvenido ${data.user.name || data.user.username}!\n\nRol: ${roleIcon} ${roleText}\n\nRedirigiendo...`);
+      console.log(`✅ ¡Bienvenido ${response.user.username}! Rol: ${roleText}`);
       
-      // Redirigir después de 500ms para que se vea el alert
-      setTimeout(() => {
-        if (data.user.role === 'Admin') {
-          navigate('/admin');
-        } else {
-          navigate('/scanner');
-        }
-      }, 500);
-      
-    } catch (err) {
-      console.error('❌ Error de conexión:', err);
-      
-      // Determinar tipo de error
-      let errorTitle = 'Error de conexión';
-      let errorMessage = 'No se pudo conectar al servidor. Verifica:\n\n• Tu conexión a internet\n• Que el servidor esté ejecutándose\n• La URL del servidor';
-      let errorIcon = '🌐';
-      
-      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
-        errorTitle = 'Servidor no disponible';
-        errorMessage = 'No se puede contactar al servidor en https://barcodeverify-backend.onrender.com\n\nAsegúrate de que el backend esté desplegado.';
-        errorIcon = '🔌';
+      // Redirigir inmediatamente (sin alert)
+      if (response.user.role === 'Admin') {
+        navigate('/admin');
+      } else {
+        navigate('/scanner');
       }
       
-      alert(`${errorIcon} ${errorTitle}\n\n${errorMessage}`);
+    } catch (error: any) {
+      console.error('❌ Error en login:', error);
       
-      setError(errorTitle);
+      // Manejar errores de authService
+      let errorMessage = 'Error al iniciar sesión';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        if (status === 401) {
+          errorMessage = 'Credenciales incorrectas. Verifica tu usuario y contraseña.';
+        } else if (status === 400) {
+          errorMessage = data?.message || 'Datos de entrada inválidos';
+        } else if (status === 404) {
+          errorMessage = 'Endpoint no encontrado. Contacta al administrador.';
+        } else if (status === 500) {
+          errorMessage = 'Error interno del servidor. Intenta más tarde.';
+        } else {
+          errorMessage = data?.message || `Error ${status}`;
+        }
+      } else if (error.request) {
+        errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+      } else {
+        errorMessage = error.message || 'Error desconocido';
+      }
+      
+      setError(errorMessage);
       setPassword('');
       
     } finally {
@@ -156,7 +125,7 @@ export default function LoginForm() {
       {/* Campo usuario */}
       <div>
         <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-          Email / Usuario
+          Usuario
         </label>
         <input
           id="username"
@@ -167,7 +136,7 @@ export default function LoginForm() {
             if (error) setError('');
           }}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-100"
-          placeholder="Ingresa tu email asignado"
+          placeholder="Ingresa tu nombre de usuario"
           disabled={loading}
           autoComplete="username"
           autoFocus
@@ -189,7 +158,7 @@ export default function LoginForm() {
               if (error) setError('');
             }}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-100 pr-12"
-            placeholder="Ingresa tu contraseña asignada"
+            placeholder="Ingresa tu contraseña"
             disabled={loading}
             autoComplete="current-password"
           />
@@ -225,6 +194,14 @@ export default function LoginForm() {
             </>
           )}
         </button>
+      </div>
+
+      {/* Información de prueba */}
+      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+        <p className="font-semibold">💡 Credenciales de prueba:</p>
+        <p>Usuario: <span className="font-mono">angie</span></p>
+        <p>Contraseña: <span className="font-mono">angie123</span></p>
+        <p className="mt-1 text-xs">Rol: Usuario</p>
       </div>
     </form>
   );
