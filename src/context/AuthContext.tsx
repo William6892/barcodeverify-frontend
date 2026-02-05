@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { ReactNode } from 'react'; // IMPORTACIÓN TYPE-ONLY
+import type { ReactNode } from 'react'; // IMPORTACIÓN TYPE-ONLY CORRECTA
 
 // Agrega interface local
 interface User {
@@ -38,7 +38,11 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [token, setToken] = useState<string | null>(() => {

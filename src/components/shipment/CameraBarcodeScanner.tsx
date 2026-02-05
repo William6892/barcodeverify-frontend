@@ -63,22 +63,18 @@ export default function CameraBarcodeScanner({ onScan, onClose }: CameraBarcodeS
   const scannerAreaRef = useRef<HTMLDivElement>(null);
   const scannerIdRef = useRef(`barcode-scanner-${Date.now()}`);
 
-  // Obtener cámaras disponibles
+  // Obtener cámaras disponibles - CORREGIDO: Usar la API correcta
   const getCameras = useCallback(async () => {
     try {
-      const devices = await Html5Qrcode.getCameras();
-      if (devices && devices.length > 0) {
-        // Convertir CameraDevice[] a MediaDeviceInfo[]
-        const mediaDevices: MediaDeviceInfo[] = devices.map(device => ({
-          deviceId: device.id,
-          groupId: device.id, // Usar id como groupId
-          kind: 'videoinput' as MediaDeviceKind,
-          label: device.label,
-          toJSON: () => ({ deviceId: device.id, kind: 'videoinput', label: device.label })
-        }));
-        setAvailableCameras(mediaDevices);
-        console.log(`📷 Cámaras encontradas: ${devices.length}`);
-        return devices;
+      // Usar navigator.mediaDevices.enumerateDevices() en lugar de Html5Qrcode.getCameras()
+      // que devuelve el tipo correcto (MediaDeviceInfo[])
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      if (videoDevices && videoDevices.length > 0) {
+        setAvailableCameras(videoDevices);
+        console.log(`📷 Cámaras encontradas: ${videoDevices.length}`);
+        return videoDevices;
       }
       throw new Error('No se encontraron cámaras');
     } catch (err) {
@@ -87,6 +83,14 @@ export default function CameraBarcodeScanner({ onScan, onClose }: CameraBarcodeS
       return [];
     }
   }, []);
+
+  // Función auxiliar para convertir MediaDeviceInfo a formato CameraDevice
+  const convertToCameraDevice = (device: MediaDeviceInfo): any => {
+    return {
+      id: device.deviceId,
+      label: device.label || `Cámara ${device.deviceId.slice(0, 8)}`
+    };
+  };
 
   // Inicializar escáner SOLO para códigos de barras
   const initScanner = useCallback(async () => {
@@ -150,17 +154,20 @@ export default function CameraBarcodeScanner({ onScan, onClose }: CameraBarcodeS
       setActiveFormats(formatNames);
       console.log('🔍 Formatos activos:', formatNames);
 
+      // Convertir MediaDeviceInfo[] a formato que Html5Qrcode pueda usar
+      const cameraDevices = cameras.map(convertToCameraDevice);
+      
       // Seleccionar cámara
-      let cameraId = cameras[0].id;
-      if (cameras.length > 1) {
+      let cameraId = cameraDevices[0].id;
+      if (cameraDevices.length > 1) {
         // Priorizar cámara trasera si existe
-        const backCamera = cameras.find(cam => 
+        const backCamera = cameraDevices.find(cam => 
           cam.label.toLowerCase().includes('back') || 
           cam.label.toLowerCase().includes('posterior') ||
           cam.label.toLowerCase().includes('rear') ||
           cam.label.toLowerCase().includes('environment')
         );
-        cameraId = backCamera?.id || cameras[currentCameraIndex % cameras.length].id;
+        cameraId = backCamera?.id || cameraDevices[currentCameraIndex % cameraDevices.length].id;
       }
 
       console.log('🎥 Iniciando escáner de códigos de barras...');
