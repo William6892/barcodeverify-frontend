@@ -112,7 +112,7 @@ export interface Product {
 }
 
 // ============================
-// SERVICIOS DE AUTENTICACIÓN - ✅ CORREGIDO
+// SERVICIOS DE AUTENTICACIÓN
 // ============================
 
 export const authService = {
@@ -120,7 +120,7 @@ export const authService = {
     try {
       console.log('📤 Enviando login:', { username: credentials.username });
       const response = await api.post('/api/auth/login', {
-        username: credentials.username,  // ✅ CORREGIDO: "username" no "email"
+        username: credentials.username,
         password: credentials.password
       });
       console.log('✅ Login exitoso');
@@ -172,61 +172,67 @@ export const authService = {
 };
 
 // ============================
-// SERVICIOS DE ENVÍOS (SHIPMENTS)
+// SERVICIOS DE ENVÍOS (SHIPMENTS) - ✅ CORREGIDAS TODAS LAS RUTAS
 // ============================
 
 export const shipmentService = {
   // Crear nuevo envío
   create: async (data: any) => {
-    const response = await api.post('/api/shipments', data);
+    const response = await api.post('/api/Shipment/create', data); // ✅ CORREGIDO
     return response.data;
   },
   
   // Iniciar escaneo
   start: async (shipmentNumber: string) => {
-    const response = await api.post('/api/shipments/start', { shipmentNumber });
+    const response = await api.post('/api/Shipment/start', { shipmentNumber }); // ✅ CORREGIDO
+    return response.data;
+  },
+  
+  // Escanear producto
+  scanProduct: async (data: any) => {
+    const response = await api.post('/api/Shipment/scan', data); // ✅ CORREGIDO
     return response.data;
   },
   
   // Completar envío
   complete: async (shipmentId: number) => {
-    const response = await api.post(`/api/shipments/complete/${shipmentId}`);
+    const response = await api.post(`/api/Shipment/complete/${shipmentId}`); // ✅ CORREGIDO
     return response.data;
   },
   
-  // ✅ Obtener envíos activos
+  // ✅ Obtener envíos activos - CORREGIDO
   getActive: async () => {
-    const response = await api.get('/api/shipments/active');
+    const response = await api.get('/api/Shipment/active'); // ✅ CAMBIADO DE "shipments" A "Shipment"
     return response.data;
   },
   
   // Obtener TODOS los envíos
   getAll: async () => {
-    const response = await api.get('/api/shipments');
+    const response = await api.get('/api/Shipment/all'); // ✅ CORREGIDO
     return response.data;
   },
   
   // Obtener envíos completados
   getCompleted: async () => {
-    const response = await api.get('/api/shipments/completed');
+    const response = await api.get('/api/Shipment/completed'); // ✅ CORREGIDO
     return response.data;
   },
   
   // Obtener envíos cancelados
   getCancelled: async () => {
-    const response = await api.get('/api/shipments/cancelled');
+    const response = await api.get('/api/Shipment/cancelled'); // ✅ CORREGIDO
     return response.data;
   },
   
   // Obtener por ID
   getById: async (id: number) => {
-    const response = await api.get(`/api/shipments/${id}`);
+    const response = await api.get(`/api/Shipment/${id}`); // ✅ CORREGIDO
     return response.data;
   },
   
   // Obtener por número
   getByNumber: async (shipmentNumber: string) => {
-    const response = await api.get(`/api/shipments/number/${shipmentNumber}`);
+    const response = await api.get(`/api/Shipment/number/${shipmentNumber}`); // ✅ CORREGIDO
     return response.data;
   },
   
@@ -237,35 +243,35 @@ export const shipmentService = {
     dateTo?: string;
     shipmentNumber?: string;
   }) => {
-    const response = await api.get('/api/shipments/search', { params });
+    const response = await api.get('/api/Shipment/search', { params }); // ✅ CORREGIDO
     return response.data;
   },
   
   // Actualizar estado
   updateStatus: async (id: number, status: string) => {
-    const response = await api.patch(`/api/shipments/${id}/status`, { status });
+    const response = await api.patch(`/api/Shipment/${id}/status`, { status }); // ✅ CORREGIDO
     return response.data;
   },
   
   // Cancelar envío (solo admin)
   cancel: async (id: number) => {
-    const response = await api.patch(`/api/shipments/${id}/cancel`);
+    const response = await api.patch(`/api/Shipment/${id}/cancel`); // ✅ CORREGIDO
     return response.data;
   },
   
   // Obtener estadísticas
   getStats: async () => {
-    const response = await api.get('/api/shipments/stats');
+    const response = await api.get('/api/Shipment/stats'); // ✅ CORREGIDO
     return response.data;
   },
 };
 
 // ============================
-// SERVICIOS DE PRODUCTOS
+// SERVICIOS DE PRODUCTOS - ✅ CORREGIDAS LAS RUTAS
 // ============================
 
 export const productService = {
-  // Escanear producto en un envío
+  // Escanear producto en un envío (ahora está en ShipmentController)
   scanProduct: async (data: { 
     shipmentId: number; 
     barcode: string; 
@@ -277,7 +283,7 @@ export const productService = {
     model?: string;
     serialNumber?: string;
   }) => {
-    const response = await api.post('/api/products/scan', data);
+    const response = await api.post('/api/Shipment/scan', data); // ✅ MOVIDO A SHIPMENT
     return response.data;
   },
   
@@ -291,7 +297,7 @@ export const productService = {
   }) => {
     console.log('📤 [productService] Enviando:', data);
     try {
-      const response = await api.post('/api/products/create-for-shipment', data);
+      const response = await api.post('/api/Product/create-for-shipment', data); // ✅ VERIFICAR SI EXISTE
       console.log('✅ [productService] Respuesta recibida');
       return response.data;
     } catch (error: any) {
@@ -302,111 +308,111 @@ export const productService = {
   
   // Obtener productos por envío
   getByShipment: async (shipmentId: number) => {
-    const response = await api.get(`/api/products/shipment/${shipmentId}`);
+    const response = await api.get(`/api/Product/shipment/${shipmentId}`); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Obtener todos los productos
   getAll: async (params?: any) => {
-    const response = await api.get('/api/products', { params });
+    const response = await api.get('/api/Product', { params }); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Buscar productos
   search: async (params: any) => {
-    const response = await api.get('/api/products/search', { params });
+    const response = await api.get('/api/Product/search', { params }); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Obtener por código de barras
   getByBarcode: async (barcode: string) => {
-    const response = await api.get(`/api/products/barcode/${barcode}`);
+    const response = await api.get(`/api/Product/barcode/${barcode}`); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Crear producto (requiere Admin)
   create: async (data: any) => {
-    const response = await api.post('/api/products', data);
+    const response = await api.post('/api/Product', data); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Obtener producto por ID
   getById: async (id: number) => {
-    const response = await api.get(`/api/products/${id}`);
+    const response = await api.get(`/api/Product/${id}`); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Actualizar producto
   update: async (id: number, data: any) => {
-    const response = await api.put(`/api/products/${id}`, data);
+    const response = await api.put(`/api/Product/${id}`, data); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Eliminar producto
   delete: async (id: number) => {
-    const response = await api.delete(`/api/products/${id}`);
+    const response = await api.delete(`/api/Product/${id}`); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Obtener estadísticas
   getStats: async () => {
-    const response = await api.get('/api/products/stats');
+    const response = await api.get('/api/Product/stats'); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
   
   // Obtener categorías de un envío
   getShipmentCategoryCounts: async (shipmentId: number) => {
-    const response = await api.get(`/api/products/shipment/${shipmentId}/categories`);
+    const response = await api.get(`/api/Product/shipment/${shipmentId}/categories`); // ✅ VERIFICAR SI EXISTE
     return response.data;
   },
 };
 
 // ============================
-// SERVICIOS DE TRANSPORTADORAS
+// SERVICIOS DE TRANSPORTADORAS - ✅ CORREGIDAS
 // ============================
 
 export const transportService = {
   getAll: async (activeOnly: boolean = true) => {
-    const response = await api.get('/api/transportcompanies', { 
+    const response = await api.get('/api/TransportCompany', { 
       params: { activeOnly } 
-    });
+    }); // ✅ CORREGIDO
     return response.data;
   },
   
   getById: async (id: number) => {
-    const response = await api.get(`/api/transportcompanies/${id}`);
+    const response = await api.get(`/api/TransportCompany/${id}`); // ✅ CORREGIDO
     return response.data;
   },
   
   searchByPlate: async (plate: string) => {
-    const response = await api.get(`/api/transportcompanies/search`, { 
+    const response = await api.get(`/api/TransportCompany/search`, { 
       params: { plate } 
-    });
+    }); // ✅ CORREGIDO
     return response.data;
   },
   
   createForUser: async (data: any) => {
-    const response = await api.post('/api/transportcompanies/user', data);
+    const response = await api.post('/api/TransportCompany/user', data); // ✅ CORREGIDO
     return response.data;
   },
   
   createForAdmin: async (data: any) => {
-    const response = await api.post('/api/transportcompanies', data);
+    const response = await api.post('/api/TransportCompany', data); // ✅ CORREGIDO
     return response.data;
   },
   
   update: async (id: number, data: any) => {
-    const response = await api.put(`/api/transportcompanies/${id}`, data);
+    const response = await api.put(`/api/TransportCompany/${id}`, data); // ✅ CORREGIDO
     return response.data;
   },
   
   delete: async (id: number) => {
-    const response = await api.delete(`/api/transportcompanies/${id}`);
+    const response = await api.delete(`/api/TransportCompany/${id}`); // ✅ CORREGIDO
     return response.data;
   },
   
   toggleStatus: async (id: number) => {
-    const response = await api.patch(`/api/transportcompanies/${id}/toggle-status`);
+    const response = await api.patch(`/api/TransportCompany/${id}/toggle-status`); // ✅ CORREGIDO
     return response.data;
   },
   
@@ -417,49 +423,49 @@ export const transportService = {
 };
 
 // ============================
-// SERVICIOS DE ADMINISTRACIÓN
+// SERVICIOS DE ADMINISTRACIÓN - ✅ NOTA: VERIFICAR SI EXISTEN
 // ============================
 
 export const adminService = {
-  // Dashboard
+  // Dashboard - VERIFICAR SI ESTOS ENDPOINTS EXISTEN
   getDashboardStats: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
     if (endDate) params.endDate = endDate.toISOString();
     
-    const response = await api.get('/api/admin/dashboard/stats', { params });
+    const response = await api.get('/api/Admin/dashboard/stats', { params });
     return response.data;
   },
   
   getQuickStats: async () => {
-    const response = await api.get('/api/admin/stats/quick');
+    const response = await api.get('/api/Admin/stats/quick');
     return response.data;
   },
   
-  // Usuarios
+  // Usuarios - VERIFICAR SI EXISTEN
   getUsers: async () => {
-    const response = await api.get('/api/admin/users');
+    const response = await api.get('/api/Admin/users');
     return response.data;
   },
   
   createUser: async (data: CreateUserDto) => {
-    const response = await api.post('/api/admin/users', data);
+    const response = await api.post('/api/Admin/users', data);
     return response.data;
   },
   
   updateUserRole: async (id: number, role: string) => {
-    const response = await api.put(`/api/admin/users/${id}/role`, { role });
+    const response = await api.put(`/api/Admin/users/${id}/role`, { role });
     return response.data;
   },
   
   updateUserStatus: async (id: number, isActive: boolean) => {
-    const response = await api.put(`/api/admin/users/${id}/status`, { isActive });
+    const response = await api.put(`/api/Admin/users/${id}/status`, { isActive });
     return response.data;
   },
   
-  // Transportadoras
+  // Transportadoras - VERIFICAR SI EXISTEN
   getTransportCompanies: async () => {
-    const response = await api.get('/api/admin/transport-companies');
+    const response = await api.get('/api/Admin/transport-companies');
     return response.data;
   },
   
@@ -469,11 +475,11 @@ export const adminService = {
     licensePlate: string;
     phone: string;
   }) => {
-    const response = await api.post('/api/admin/transport-companies', data);
+    const response = await api.post('/api/Admin/transport-companies', data);
     return response.data;
   },
   
-  // Productos
+  // Productos - VERIFICAR SI EXISTEN
   searchProducts: async (params: {
     barcode?: string;
     name?: string;
@@ -483,17 +489,17 @@ export const adminService = {
     page?: number;
     pageSize?: number;
   }) => {
-    const response = await api.get('/api/admin/products/search', { params });
+    const response = await api.get('/api/Admin/products/search', { params });
     return response.data;
   },
   
-  // Reportes
+  // Reportes - VERIFICAR SI EXISTEN
   generateShipmentReport: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
     if (endDate) params.endDate = endDate.toISOString();
     
-    const response = await api.get('/api/admin/reports/shipments', { params });
+    const response = await api.get('/api/Admin/reports/shipments', { params });
     return response.data;
   },
 };
@@ -511,17 +517,17 @@ export const userManagementService = {
     password: string;
     role: 'User' | 'Admin' | 'Scanner';
   }) => {
-    const response = await api.post('/api/admin/users', userData);
+    const response = await api.post('/api/Admin/users', userData);
     return response.data;
   },
   
   updateUserRole: async (userId: number, role: 'User' | 'Admin' | 'Scanner') => {
-    const response = await api.put(`/api/admin/users/${userId}/role`, { role });
+    const response = await api.put(`/api/Admin/users/${userId}/role`, { role });
     return response.data;
   },
   
   updateUserStatus: async (userId: number, isActive: boolean) => {
-    const response = await api.put(`/api/admin/users/${userId}/status`, { isActive });
+    const response = await api.put(`/api/Admin/users/${userId}/status`, { isActive });
     return response.data;
   },
   
@@ -615,14 +621,18 @@ export const formatRelativeTime = (dateString: string): string => {
   }
 };
 
-// Exportar todas las funciones por defecto
+// Notas importantes:
+// 1. Los endpoints de ProductController pueden no existir (marcados como "VERIFICAR SI EXISTE")
+// 2. Los endpoints de AdminController pueden no existir (marcados como "VERIFICAR SI EXISTEN")
+// 3. Para escanear productos usa: shipmentService.scanProduct() NO productService.scanProduct()
+
 export default {
   api,
   authService,
-  shipmentService,
-  productService,
+  shipmentService, // ✅ ESTE ES EL SERVICIO PRINCIPAL PARA SHIPMENTS
+  productService,  // ⚠️ VERIFICAR SI EXISTEN ESTOS ENDPOINTS
   transportService,
-  adminService,
+  adminService,    // ⚠️ VERIFICAR SI EXISTEN ESTOS ENDPOINTS
   userManagementService,
   handleApiError,
   formatToColombiaTime,
