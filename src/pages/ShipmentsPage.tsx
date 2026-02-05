@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ActiveShipments from '../components/shipment/ActiveShipments';
 import CreateShipmentModal from '../components/shipment/CreateShipmentModal';
-import { Truck, Plus, Package, Clock, CheckCircle, XCircle, AlertCircle, Zap, Eye, Shield } from 'lucide-react';
+import { Truck, Plus, Package, AlertCircle, Zap, Eye, Shield } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function ShipmentsPage() {
@@ -29,10 +29,10 @@ export default function ShipmentsPage() {
     toast.success(`Escaneando: ${shipmentNumber}`);
   }, [navigate]);
 
-  // ✅ Optimizado: Refresh manual
-  const handleManualRefresh = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
-  }, []);
+  // ✅ Optimizado: Refresh manual (removido ya que no se usa en ActiveShipments)
+  // const handleManualRefresh = useCallback(() => {
+  //   setRefreshKey(prev => prev + 1);
+  // }, []);
 
   // ✅ Usar useMemo para cálculos derivados
   const isAdmin = useMemo(() => {
@@ -90,7 +90,7 @@ export default function ShipmentsPage() {
           <ActiveShipments 
             key={refreshKey}
             onSelectShipment={handleSelectShipment}
-            onRefresh={handleManualRefresh}
+            // onRefresh={handleManualRefresh} // Removido: ActiveShipments no tiene esta prop
             showAll={isAdmin}
             showFilters={true}
           />

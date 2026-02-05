@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, Smartphone, AlertCircle, X, RefreshCw, Maximize2, Minimize2, Scan, CheckCircle, Barcode } from 'lucide-react';
+import { Smartphone, AlertCircle, X, RefreshCw, Maximize2, Minimize2, Scan, CheckCircle, Barcode } from 'lucide-react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 interface CameraBarcodeScannerProps {
@@ -68,7 +68,15 @@ export default function CameraBarcodeScanner({ onScan, onClose }: CameraBarcodeS
     try {
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
-        setAvailableCameras(devices);
+        // Convertir CameraDevice[] a MediaDeviceInfo[]
+        const mediaDevices: MediaDeviceInfo[] = devices.map(device => ({
+          deviceId: device.id,
+          groupId: device.id, // Usar id como groupId
+          kind: 'videoinput' as MediaDeviceKind,
+          label: device.label,
+          toJSON: () => ({ deviceId: device.id, kind: 'videoinput', label: device.label })
+        }));
+        setAvailableCameras(mediaDevices);
         console.log(`📷 Cámaras encontradas: ${devices.length}`);
         return devices;
       }

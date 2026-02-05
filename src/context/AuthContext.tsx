@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// REMUEVE: import { User } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react'; // IMPORTACIÓN TYPE-ONLY
 
 // Agrega interface local
 interface User {

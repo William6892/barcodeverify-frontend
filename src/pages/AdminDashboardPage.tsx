@@ -1,4 +1,4 @@
-// Primera línea del archivo - CORREGIR
+// Primera línea del archivo - CORREGIDO
 import { useAuth } from '../context/AuthContext'; // <-- ¡ESTA ES LA LÍNEA QUE DEBES CAMBIAR!
 
 import { useState, useEffect } from 'react';
@@ -11,8 +11,6 @@ import {
   Activity,
   UserCheck,
   AlertCircle,
-  CheckCircle,
-  Clock,
   RefreshCw
 } from 'lucide-react';
 
@@ -76,9 +74,8 @@ interface QuickStats {
 }
 
 export default function AdminDashboardPage() {
-  const { token, user, logout } = useAuth(); // Obtener token del contexto
+  const { token, logout } = useAuth(); // Obtener token del contexto (removido 'user' que no se usaba)
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [quickStats, setQuickStats] = useState<QuickStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,9 +102,9 @@ export default function AdminDashboardPage() {
       }
       
       // Llamar a las dos APIs en paralelo CON TOKEN
-      const [dashboardResponse, quickStatsResponse] = await Promise.all([
+      const [dashboardResponse] = await Promise.all([
         fetch('/api/admin/dashboard/stats', { headers }),
-        fetch('/api/admin/stats/quick', { headers })
+        // Removida la segunda llamada ya que quickStats no se usaba
       ]);
 
       if (!dashboardResponse.ok) {
@@ -120,17 +117,8 @@ export default function AdminDashboardPage() {
         throw new Error(`Error dashboard: ${dashboardResponse.status}`);
       }
 
-      if (!quickStatsResponse.ok) {
-        console.warn('No se pudieron obtener estadísticas rápidas');
-      }
-
       const dashboardData = await dashboardResponse.json();
-      const quickStatsData = quickStatsResponse.ok 
-        ? await quickStatsResponse.json()
-        : null;      
-      
       setStats(dashboardData);
-      setQuickStats(quickStatsData);
       
     } catch (err: any) {
       console.error('Error fetching admin stats:', err);

@@ -29,13 +29,13 @@ import {
   EyeOff,
   Calendar as CalendarIcon,
   Clock as ClockIcon,
-    Loader2,
+  Loader2,
   FileWarning,
   Zap,  
   Lock
 } from 'lucide-react';
 import { shipmentService, transportService, productService } from '../../services/api';
-import { toast } from 'react-hot-toast';
+// import { toast } from 'react-hot-toast'; // COMENTADO si no se usa
 
 interface TransportCompany {
   id: number;
@@ -107,7 +107,7 @@ export default function CreateShipmentModal({
   const [showProductsWarning, setShowProductsWarning] = useState(false);
   const [confirmNoProducts, setConfirmNoProducts] = useState(false);
   const [confirmNoDepartureTime, setConfirmNoDepartureTime] = useState(false);
-  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  // const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set()); // COMENTADO - no usado
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showBulkInput, setShowBulkInput] = useState(false);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([]);
@@ -195,12 +195,14 @@ export default function CreateShipmentModal({
           const newQuantity = p.quantity + delta;
           
           if (newQuantity < 1) {
-            toast.error('La cantidad mínima es 1');
+            // toast.error('La cantidad mínima es 1');
+            alert('La cantidad mínima es 1');
             return p;
           }
           
           if (newQuantity > 999) {
-            toast.error('La cantidad máxima por producto es 999');
+            // toast.error('La cantidad máxima por producto es 999');
+            alert('La cantidad máxima por producto es 999');
             return p;
           }
           
@@ -225,7 +227,8 @@ export default function CreateShipmentModal({
     if (!shouldRemove) return;
     
     setProducts(prev => prev.filter(p => p.id !== id));
-    toast.success(`Producto eliminado: ${productToRemove?.barcode}`);
+    // toast.success(`Producto eliminado: ${productToRemove?.barcode}`);
+    alert(`Producto eliminado: ${productToRemove?.barcode}`);
     
     if (products.length === 1) {
       setShowProductsWarning(true);
@@ -245,7 +248,8 @@ export default function CreateShipmentModal({
       setProducts([]);
       setConfirmNoProducts(false);
       setShowProductsWarning(true);
-      toast.success('Todos los productos han sido eliminados');
+      // toast.success('Todos los productos han sido eliminados');
+      alert('Todos los productos han sido eliminados');
     }
   };
 
@@ -253,13 +257,15 @@ export default function CreateShipmentModal({
   const handleNextStep = () => {
     if (step === 1) {
       if (!validateStep1()) {
-        toast.error('Por favor, corrige los errores antes de continuar');
+        // toast.error('Por favor, corrige los errores antes de continuar');
+        alert('Por favor, corrige los errores antes de continuar');
         return;
       }
       setStep(2);
     } else if (step === 2) {
       if (!validateStep2()) {
-        toast.error('Por favor, corrige los errores antes de continuar');
+        // toast.error('Por favor, corrige los errores antes de continuar');
+        alert('Por favor, corrige los errores antes de continuar');
         return;
       }
       setStep(3);
@@ -292,66 +298,70 @@ export default function CreateShipmentModal({
   };
 
   // ✅ 12. Función para crear productos en backend
-// ✅ MODIFICAR esta función (está en tu CreateShipmentModal.tsx)
-const createProductsInBackend = async (shipmentId: number) => {
-  if (products.length === 0) {
-    console.log('📝 No hay productos para crear');
-    return [];
-  }
+  // ✅ MODIFICAR esta función (está en tu CreateShipmentModal.tsx)
+  const createProductsInBackend = async (shipmentId: number) => {
+    if (products.length === 0) {
+      console.log('📝 No hay productos para crear');
+      return [];
+    }
 
-  const createdProducts = [];
-  console.log(`🔄 Intentando crear ${products.length} productos...`);
+    const createdProducts = [];
+    console.log(`🔄 Intentando crear ${products.length} productos...`);
 
-  for (const product of products) {
-    try {
-      const productData = {
-        barcode: product.barcode,
-        name: product.name,
-        quantity: product.quantity,
-        category: product.category || 'General',
-        shipmentId: shipmentId
-      };
+    for (const product of products) {
+      try {
+        const productData = {
+          barcode: product.barcode,
+          name: product.name,
+          quantity: product.quantity,
+          category: product.category || 'General',
+          shipmentId: shipmentId
+        };
 
-      console.log('📤 Datos que voy a enviar:', productData);
-      
-      // Agrega un log ANTES de llamar al servicio
-      console.log('📤 Llamando a productService.create...');
-      
-      const response = await productService.create(productData);
-      
-      console.log('✅ Respuesta exitosa:', response);
-      createdProducts.push(response);
-      console.log(`✅ Producto ${product.barcode} creado correctamente`);
-      
-    } catch (error: any) {
-      console.error('❌ ERROR COMPLETO:', error);
-      
-      // Muestra información detallada del error
-      if (error.response) {
-        console.error('❌ Status:', error.response.status);
-        console.error('❌ Datos del error:', error.response.data);
-        console.error('❌ Headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('❌ No hubo respuesta del servidor');
-      } else {
-        console.error('❌ Error al configurar la petición:', error.message);
-      }
-      
-      // Muestra mensaje de error al usuario
-      if (error.response?.status === 403) {
-        toast.error(`No tienes permiso para crear productos (error 403). Contacta al administrador.`);
-      } else if (error.response?.status === 401) {
-        toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-      } else if (error.response?.status === 409) {
-        toast.error(`El producto ${product.barcode} ya existe en el sistema.`);
-      } else {
-        toast.error(`Error al crear producto ${product.barcode}: ${error.message}`);
+        console.log('📤 Datos que voy a enviar:', productData);
+        
+        // Agrega un log ANTES de llamar al servicio
+        console.log('📤 Llamando a productService.create...');
+        
+        const response = await productService.create(productData);
+        
+        console.log('✅ Respuesta exitosa:', response);
+        createdProducts.push(response);
+        console.log(`✅ Producto ${product.barcode} creado correctamente`);
+        
+      } catch (error: any) {
+        console.error('❌ ERROR COMPLETO:', error);
+        
+        // Muestra información detallada del error
+        if (error.response) {
+          console.error('❌ Status:', error.response.status);
+          console.error('❌ Datos del error:', error.response.data);
+          console.error('❌ Headers:', error.response.headers);
+        } else if (error.request) {
+          console.error('❌ No hubo respuesta del servidor');
+        } else {
+          console.error('❌ Error al configurar la petición:', error.message);
+        }
+        
+        // Muestra mensaje de error al usuario
+        if (error.response?.status === 403) {
+          // toast.error(`No tienes permiso para crear productos (error 403). Contacta al administrador.`);
+          alert(`No tienes permiso para crear productos (error 403). Contacta al administrador.`);
+        } else if (error.response?.status === 401) {
+          // toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+          alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        } else if (error.response?.status === 409) {
+          // toast.error(`El producto ${product.barcode} ya existe en el sistema.`);
+          alert(`El producto ${product.barcode} ya existe en el sistema.`);
+        } else {
+          // toast.error(`Error al crear producto ${product.barcode}: ${error.message}`);
+          alert(`Error al crear producto ${product.barcode}: ${error.message}`);
+        }
       }
     }
-  }
-    
-  return createdProducts;
-};
+      
+    return createdProducts;
+  };
 
   // ====================================
   // FUNCIONES EXISTENTES (ya en tu código)
@@ -417,7 +427,7 @@ const createProductsInBackend = async (shipmentId: number) => {
         slotDate.setHours(hour);
         
         const isPast = slotDate < now;
-        const isToday = day === 0;
+        // const isToday = day === 0; // COMENTADO - no usado
         
         slots.push({
           start: slotDate.toISOString().slice(0, 16),
@@ -461,7 +471,8 @@ const createProductsInBackend = async (shipmentId: number) => {
         setSelectedCompanyId(activeCompanies[0].id);
         setValidationErrors(prev => ({ ...prev, transportCompany: undefined }));
       } else {
-        toast.error('No hay transportadoras activas disponibles');
+        // toast.error('No hay transportadoras activas disponibles');
+        alert('No hay transportadoras activas disponibles');
         setSelectedCompanyId('');
         setValidationErrors(prev => ({ 
           ...prev, 
@@ -479,7 +490,8 @@ const createProductsInBackend = async (shipmentId: number) => {
         errorMessage = error.message;
       }
       
-      toast.error(errorMessage);
+      // toast.error(errorMessage);
+      alert(errorMessage);
       setTransportCompanies([]);
       setSelectedCompanyId('');
       setValidationErrors(prev => ({ 
@@ -518,6 +530,7 @@ const createProductsInBackend = async (shipmentId: number) => {
         setValidationErrors(prev => ({ ...prev, capacity: undefined }));
       }
     } catch (error) {
+      // Silencioso
     } finally {
       setIsCheckingCapacity(false);
     }
@@ -526,7 +539,7 @@ const createProductsInBackend = async (shipmentId: number) => {
   // ✅ Resetear todas las validaciones
   const resetValidations = () => {
     setValidationErrors({});
-    setTouchedFields(new Set());
+    // setTouchedFields(new Set()); // COMENTADO
     setShowProductsWarning(false);
     setShowDepartureTimeWarning(false);
     setCapacityWarning('');
@@ -684,12 +697,14 @@ const createProductsInBackend = async (shipmentId: number) => {
       .filter(barcode => barcode.length >= VALIDATION_CONFIG.MIN_BARCODE_LENGTH);
     
     if (barcodes.length === 0) {
-      toast.error('No se encontraron códigos válidos');
+      // toast.error('No se encontraron códigos válidos');
+      alert('No se encontraron códigos válidos');
       return;
     }
     
     if (products.length + barcodes.length > VALIDATION_CONFIG.MAX_PRODUCTS) {
-      toast.error(`Límite máximo de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos excedido`);
+      // toast.error(`Límite máximo de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos excedido`);
+      alert(`Límite máximo de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos excedido`);
       return;
     }
     
@@ -699,7 +714,8 @@ const createProductsInBackend = async (shipmentId: number) => {
     barcodes.forEach(barcode => {
       // Validar formato del código
       if (!/^[A-Za-z0-9\-_.]+$/.test(barcode)) {
-        toast.error(`Código inválido: ${barcode}`);
+        // toast.error(`Código inválido: ${barcode}`);
+        alert(`Código inválido: ${barcode}`);
         return;
       }
       
@@ -726,11 +742,13 @@ const createProductsInBackend = async (shipmentId: number) => {
     
     if (newProducts.length > 0) {
       setProducts([...products, ...newProducts]);
-      toast.success(`${newProducts.length} nuevos productos agregados`);
+      // toast.success(`${newProducts.length} nuevos productos agregados`);
+      alert(`${newProducts.length} nuevos productos agregados`);
     }
     
     if (duplicates.length > 0) {
-      toast.info(`${duplicates.length} productos ya existían, se incrementó su cantidad`);
+      // toast.info(`${duplicates.length} productos ya existían, se incrementó su cantidad`);
+      alert(`${duplicates.length} productos ya existían, se incrementó su cantidad`);
     }
     
     setBulkBarcodeInput('');
@@ -751,7 +769,8 @@ const createProductsInBackend = async (shipmentId: number) => {
         ...prev, 
         barcode: 'Ingresa un código de barras' 
       }));
-      toast.error('Ingresa un código de barras');
+      // toast.error('Ingresa un código de barras');
+      alert('Ingresa un código de barras');
       return;
     }
 
@@ -760,7 +779,8 @@ const createProductsInBackend = async (shipmentId: number) => {
         ...prev, 
         barcode: `El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres` 
       }));
-      toast.error(`El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres`);
+      // toast.error(`El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres`);
+      alert(`El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres`);
       return;
     }
 
@@ -769,7 +789,8 @@ const createProductsInBackend = async (shipmentId: number) => {
         ...prev, 
         barcode: `El código no puede exceder los ${VALIDATION_CONFIG.MAX_BARCODE_LENGTH} caracteres` 
       }));
-      toast.error('El código es demasiado largo');
+      // toast.error('El código es demasiado largo');
+      alert('El código es demasiado largo');
       return;
     }
 
@@ -778,7 +799,8 @@ const createProductsInBackend = async (shipmentId: number) => {
         ...prev, 
         barcode: 'Solo letras, números, guiones, puntos y guiones bajos' 
       }));
-      toast.error('El código contiene caracteres inválidos');
+      // toast.error('El código contiene caracteres inválidos');
+      alert('El código contiene caracteres inválidos');
       return;
     }
 
@@ -787,7 +809,8 @@ const createProductsInBackend = async (shipmentId: number) => {
         ...prev, 
         barcode: 'No puede empezar o terminar con caracteres especiales' 
       }));
-      toast.error('El código no puede empezar o terminar con caracteres especiales');
+      // toast.error('El código no puede empezar o terminar con caracteres especiales');
+      alert('El código no puede empezar o terminar con caracteres especiales');
       return;
     }
 
@@ -795,7 +818,8 @@ const createProductsInBackend = async (shipmentId: number) => {
     if (existingProduct) {
       const newQuantity = existingProduct.quantity + 1;
       if (newQuantity > 999) {
-        toast.error('No puedes agregar más de 999 unidades del mismo producto');
+        // toast.error('No puedes agregar más de 999 unidades del mismo producto');
+        alert('No puedes agregar más de 999 unidades del mismo producto');
         return;
       }
       
@@ -804,7 +828,8 @@ const createProductsInBackend = async (shipmentId: number) => {
           ? { ...p, quantity: newQuantity }
           : p
       ));
-      toast.success(`Cantidad aumentada: ${barcode} (x${newQuantity})`);
+      // toast.success(`Cantidad aumentada: ${barcode} (x${newQuantity})`);
+      alert(`Cantidad aumentada: ${barcode} (x${newQuantity})`);
       
       if (showProductsWarning) {
         setShowProductsWarning(false);
@@ -813,7 +838,8 @@ const createProductsInBackend = async (shipmentId: number) => {
       setValidationErrors(prev => ({ ...prev, barcode: undefined }));
     } else {
       if (products.length >= VALIDATION_CONFIG.MAX_PRODUCTS) {
-        toast.error(`No puedes agregar más de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos diferentes`);
+        // toast.error(`No puedes agregar más de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos diferentes`);
+        alert(`No puedes agregar más de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos diferentes`);
         return;
       }
 
@@ -827,7 +853,8 @@ const createProductsInBackend = async (shipmentId: number) => {
       };
       
       setProducts([...products, newProduct]);
-      toast.success(`Producto agregado: ${barcode}`);
+      // toast.success(`Producto agregado: ${barcode}`);
+      alert(`Producto agregado: ${barcode}`);
       
       if (showProductsWarning) {
         setShowProductsWarning(false);
@@ -872,9 +899,11 @@ const createProductsInBackend = async (shipmentId: number) => {
         setConfirmNoProducts(true);
         setShowProductsWarning(false);
         setValidationErrors(prev => ({ ...prev, products: undefined }));
-        toast.success('✅ Aprobación confirmada. Se creará envío sin productos.');
+        // toast.success('✅ Aprobación confirmada. Se creará envío sin productos.');
+        alert('✅ Aprobación confirmada. Se creará envío sin productos.');
       } else {
-        toast.error('❌ Código de aprobación incorrecto. No se puede continuar sin productos.');
+        // toast.error('❌ Código de aprobación incorrecto. No se puede continuar sin productos.');
+        alert('❌ Código de aprobación incorrecto. No se puede continuar sin productos.');
       }
     }
   };
@@ -895,7 +924,8 @@ const createProductsInBackend = async (shipmentId: number) => {
       setConfirmNoDepartureTime(true);
       setShowDepartureTimeWarning(false);
       setValidationErrors(prev => ({ ...prev, departureTime: undefined }));
-      toast.success('Se creará envío sin hora de salida especificada');
+      // toast.success('Se creará envío sin hora de salida especificada');
+      alert('Se creará envío sin hora de salida especificada');
     }
   };
 
@@ -973,14 +1003,16 @@ const createProductsInBackend = async (shipmentId: number) => {
     
     // Validaciones cruzadas adicionales
     if (products.length > 0 && !estimatedDeparture && !confirmNoDepartureTime) {
-      toast.error('Los envíos con productos requieren hora de salida');
+      // toast.error('Los envíos con productos requieren hora de salida');
+      alert('Los envíos con productos requieren hora de salida');
       setShowDepartureTimeWarning(true);
       return false;
     }
     
     // Validar capacidad final
     if (validationErrors.capacity) {
-      toast.error('Excede la capacidad de la transportadora seleccionada');
+      // toast.error('Excede la capacidad de la transportadora seleccionada');
+      alert('Excede la capacidad de la transportadora seleccionada');
       return false;
     }
     
@@ -993,7 +1025,8 @@ const createProductsInBackend = async (shipmentId: number) => {
     setValidationErrors(prev => ({ ...prev, departureTime: undefined }));
     setShowDepartureTimeWarning(false);
     setConfirmNoDepartureTime(false);
-    toast.success(`Hora de salida establecida: ${new Date(slotStart).toLocaleString('es-ES')}`);
+    // toast.success(`Hora de salida establecida: ${new Date(slotStart).toLocaleString('es-ES')}`);
+    alert(`Hora de salida establecida: ${new Date(slotStart).toLocaleString('es-ES')}`);
   };
 
   // ✅ Manejar envío del formulario
@@ -1001,13 +1034,15 @@ const createProductsInBackend = async (shipmentId: number) => {
     e.preventDefault();
     
     if (isSubmitting) {
-      toast.error('El envío ya se está procesando');
+      // toast.error('El envío ya se está procesando');
+      alert('El envío ya se está procesando');
       return;
     }
     
     // Validación final estricta
     if (!validateFinalSubmission()) {
-      toast.error('❌ No se puede crear el envío. Corrige todos los errores.');
+      // toast.error('❌ No se puede crear el envío. Corrige todos los errores.');
+      alert('❌ No se puede crear el envío. Corrige todos los errores.');
       return;
     }
     
@@ -1032,7 +1067,8 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
 
     const isConfirmed = window.confirm(confirmationDetails);
     if (!isConfirmed) {
-      toast.info('Creación cancelada por el usuario');
+      // toast.info('Creación cancelada por el usuario');
+      alert('Creación cancelada por el usuario');
       return;
     }
 
@@ -1077,56 +1113,12 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
         createdProducts = await createProductsInBackend(shipmentId);
       }
 
-      // 3️⃣ Enviar notificación de éxito
+      // 3️⃣ Enviar notificación de éxito (usando alert en lugar de toast)
       const successMessage = products.length > 0
         ? `✅ Envío creado exitosamente con ${products.length} productos`
         : '⚠️ Envío creado SIN PRODUCTOS (aprobación especial)';
       
-      toast.success(
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-green-600" />
-            </div>
-          </div>
-          <div>
-            <p className="font-semibold text-green-800">{successMessage}</p>
-            <div className="mt-1 space-y-1">
-              <p className="text-sm text-gray-700">
-                Número: <span className="font-mono font-bold">{shipmentNumber}</span>
-              </p>
-              <p className="text-sm text-gray-700">
-                ID: <span className="font-mono font-bold">{shipmentId}</span>
-              </p>
-              {products.length > 0 ? (
-                <div>
-                  <p className="text-xs text-green-600 font-medium mt-1">
-                    ✓ {products.length} producto{products.length !== 1 ? 's' : ''} creado{products.length !== 1 ? 's' : ''}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    Total unidades: <span className="font-bold">{products.reduce((sum, p) => sum + p.quantity, 0)}</span>
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-xs text-yellow-600 font-medium mt-1">
-                    ⚠️ Envío creado sin productos (aprobación especial)
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    Recuerda agregar productos desde el módulo de escaneo
-                  </p>
-                </div>
-              )}
-              {!estimatedDeparture && confirmNoDepartureTime && (
-                <p className="text-xs text-orange-600 font-medium">
-                  ⚠️ Sin hora de salida especificada
-                </p>
-              )}
-            </div>
-          </div>
-        </div>,
-        { duration: 6000 }
-      );
+      alert(successMessage);
       
       // 4️⃣ Pasar datos completos
       const fullShipmentData = {
@@ -1162,12 +1154,13 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
         errorMessage = error.message;
       }
       
-      toast.error(
-        <div className="flex items-start gap-2">
-          <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-          <span>{errorMessage}</span>
-        </div>
-      );
+      // toast.error(
+      //   <div className="flex items-start gap-2">
+      //     <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+      //     <span>{errorMessage}</span>
+      //   </div>
+      // );
+      alert(errorMessage);
     } finally {
       setLoading(false);
       setIsSubmitting(false);
@@ -1177,7 +1170,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
   // ✅ Obtener transportadora seleccionada
   const selectedCompany = transportCompanies.find(c => c.id === selectedCompanyId);
   const totalProductsCount = products.reduce((sum, product) => sum + product.quantity, 0);
-  const uniqueProductsCount = products.length;
+  // const uniqueProductsCount = products.length; // COMENTADO - no usado
 
   // ✅ Calcular si hay errores críticos
   const hasCriticalErrors = () => {
@@ -1219,7 +1212,8 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
             <button
               onClick={() => {
                 if (isSubmitting) {
-                  toast.error('No puedes cerrar mientras se procesa el envío');
+                  // toast.error('No puedes cerrar mientras se procesa el envío');
+                  alert('No puedes cerrar mientras se procesa el envío');
                   return;
                 }
                 const hasChanges = shipmentNumber || estimatedDeparture || products.length > 0;
@@ -2282,9 +2276,11 @@ ABCD123456"
                     type="button"
                     onClick={() => {
                       if (validateFinalSubmission()) {
-                        toast.success('✅ Todos los requisitos están cumplidos');
+                        // toast.success('✅ Todos los requisitos están cumplidos');
+                        alert('✅ Todos los requisitos están cumplidos');
                       } else {
-                        toast.error('❌ Hay errores que corregir antes de crear el envío');
+                        // toast.error('❌ Hay errores que corregir antes de crear el envío');
+                        alert('❌ Hay errores que corregir antes de crear el envío');
                       }
                     }}
                     className="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center gap-2 transition-colors"
