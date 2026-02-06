@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 // Importa el servicio de admin
-import { adminService } from '../services/api'; // <-- AÑADIDO
+import { adminService } from '../services/api';
 
 // Tipos basados en API 
 interface DashboardStats {
@@ -62,7 +62,7 @@ interface DashboardStats {
   }>;
 }
 
-// interfaz pero la USA para que no dé error
+// interfaz para QuickStats
 interface QuickStats {
   today: {
     shipments: number;
@@ -87,29 +87,20 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Obteniendo estadísticas de admin...');
-      
-      // ✅ CORRECTO: Usar adminService que ya tiene la URL base configurada
+      // ✅ Usar adminService que ya tiene la URL base configurada
       const [dashboardData, quickStatsData] = await Promise.all([
         adminService.getDashboardStats().catch(err => {
-          console.error('Error en getDashboardStats:', err);
           throw err;
         }),
-        adminService.getQuickStats().catch(err => {
-          console.warn('Quick stats no disponibles:', err.message);
+        adminService.getQuickStats().catch(() => {
           return null; // No fallar si quickStats falla
         })
       ]);
-      
-      console.log('✅ Dashboard data recibida:', dashboardData);
-      console.log('✅ Quick stats recibidas:', quickStatsData);
       
       setStats(dashboardData);
       setQuickStats(quickStatsData);
       
     } catch (err: any) {
-      console.error('❌ Error fetching admin stats:', err);
-      
       // Extraer mensaje de error más descriptivo
       let errorMessage = 'Error al cargar las estadísticas del sistema';
       
@@ -119,7 +110,7 @@ export default function AdminDashboardPage() {
       } else if (err.response?.status === 403) {
         errorMessage = 'No tienes permisos de administrador.';
       } else if (err.response?.status === 404) {
-        errorMessage = 'No se encontró el recurso solicitado. Verifica la configuración del backend.';
+        errorMessage = 'No se encontró el recurso solicitado.';
       } else if (err.message?.includes('Network Error')) {
         errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
       } else if (err.response?.data?.message) {
@@ -136,7 +127,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchAdminStats();
-  }, [token]); // Refetch cuando cambie el token
+  }, [token]);
 
   // Calcular estadísticas derivadas
   const calculateDerivedStats = () => {
@@ -294,7 +285,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Estadísticas principales - USAMOS quickStats donde sea relevante */}
+      {/* Estadísticas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Usuarios */}
         <div className="bg-white rounded-xl border p-6 shadow-sm">
