@@ -5,6 +5,9 @@ import {
 } from 'lucide-react';
 import './css/UsersManagement.css';
 
+// Importa el servicio de admin
+import { adminService, handleApiError } from '../services/api'; // <-- AÑADIDO
+
 interface User {
   id: number;
   username: string;
@@ -95,23 +98,11 @@ export default function UsersManagement() {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No autenticado');
-
-      const res = await fetch('/api/admin/users', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) throw new Error('Sesión expirada');
-        if (res.status === 403) throw new Error('Sin permisos');
-        throw new Error('Error al cargar usuarios');
-      }
-
-      const data = await res.json();
-      setUsers(data);
+      // ✅ CORRECTO: Usar adminService en lugar de fetch
+      const users = await adminService.getUsers();
+      setUsers(users);
     } catch (err: any) {
-      setError(err.message);
+      setError(handleApiError(err));
     } finally {
       setLoading(false);
     }
@@ -128,27 +119,13 @@ export default function UsersManagement() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          username: formData.username.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-          role: formData.role
-        })
+      // ✅ CORRECTO: Usar adminService
+      await adminService.createUser({
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        role: formData.role
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Error al crear usuario');
-      }
 
       setSuccess('✅ Usuario creado exitosamente');
       setShowCreateModal(false);
@@ -157,7 +134,7 @@ export default function UsersManagement() {
       
       setTimeout(() => setSuccess(null), 5000);
     } catch (err: any) {
-      setError(err.message);
+      setError(handleApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -170,26 +147,9 @@ export default function UsersManagement() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
+      // ✅ CORRECTO: Usar adminService para actualizar rol
+      await adminService.updateUserRole(selectedUser.id, editFormData.role);
       
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          username: editFormData.username.trim(),
-          email: editFormData.email.trim(),
-          role: editFormData.role
-        })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Error al actualizar');
-      }
-
       setSuccess('✅ Usuario actualizado exitosamente');
       setShowEditModal(false);
       resetForm();
@@ -197,7 +157,7 @@ export default function UsersManagement() {
       
       setTimeout(() => setSuccess(null), 5000);
     } catch (err: any) {
-      setError(err.message);
+      setError(handleApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -205,25 +165,15 @@ export default function UsersManagement() {
 
   const handleToggleStatus = async (userId: number, currentStatus: boolean) => {
     try {
-      const token = localStorage.getItem('token');
-      
-      const res = await fetch(`/api/admin/users/${userId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ isActive: !currentStatus })
-      });
-
-      if (!res.ok) throw new Error('Error al cambiar estado');
+      // ✅ CORRECTO: Usar adminService
+      await adminService.updateUserStatus(userId, !currentStatus);
 
       setSuccess(`✅ Usuario ${!currentStatus ? 'activado' : 'desactivado'}`);
       await fetchUsers();
       
       setTimeout(() => setSuccess(null), 5000);
     } catch (err: any) {
-      setError(err.message);
+      setError(handleApiError(err));
     }
   };
 
