@@ -433,33 +433,33 @@ export const adminService = {
     if (startDate) params.startDate = startDate.toISOString();
     if (endDate) params.endDate = endDate.toISOString();
     
-    const response = await api.get('/api/Admin/dashboard/stats', { params });
+    const response = await api.get('/api/admin/dashboard/stats', { params });
     return response.data;
   },
   
   getQuickStats: async () => {
-    const response = await api.get('/api/Admin/stats/quick');
+    const response = await api.get('/api/admin/stats/quick');
     return response.data;
   },
   
   // Usuarios - VERIFICAR SI EXISTEN
   getUsers: async () => {
-    const response = await api.get('/api/Admin/users');
+    const response = await api.get('/api/admin/users');
     return response.data;
   },
   
   createUser: async (data: CreateUserDto) => {
-    const response = await api.post('/api/Admin/users', data);
+    const response = await api.post('/api/admin/users', data);
     return response.data;
   },
   
   updateUserRole: async (id: number, role: string) => {
-    const response = await api.put(`/api/Admin/users/${id}/role`, { role });
+    const response = await api.put(`/api/admin/users/${id}/role`, { role });
     return response.data;
   },
   
   updateUserStatus: async (id: number, isActive: boolean) => {
-    const response = await api.put(`/api/Admin/users/${id}/status`, { isActive });
+    const response = await api.put(`/api/admin/users/${id}/status`, { isActive });
     return response.data;
   },
   

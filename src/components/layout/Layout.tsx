@@ -1,4 +1,4 @@
-// Layout.tsx - VERSIÓN CON SOLO SIDEBAR
+// Layout.tsx
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
