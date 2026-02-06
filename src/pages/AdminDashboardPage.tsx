@@ -1,6 +1,4 @@
-
 import { useAuth } from '../context/AuthContext';
-
 import { useState, useEffect } from 'react';
 import { 
   Users, 
@@ -13,6 +11,9 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
+
+// Importa el servicio de admin
+import { adminService } from '../services/api'; // <-- AÑADIDO
 
 // Tipos basados en API 
 interface DashboardStats {
@@ -75,7 +76,7 @@ interface QuickStats {
 }
 
 export default function AdminDashboardPage() {
-  const { token, logout } = useAuth(); // Obtener token del contexto (removido 'user' que no se usaba)
+  const { token, logout } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [quickStats, setQuickStats] = useState<QuickStats | null>(null); 
   const [loading, setLoading] = useState(true);
@@ -86,60 +87,48 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setError(null);
       
-      // Preparar headers con token de autenticación
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
+      console.log('🔄 Obteniendo estadísticas de admin...');
       
-      // AGREGAR EL TOKEN DE AUTENTICACIÓN
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      } else {
-        console.warn('⚠️ No se encontró token de autenticación');
-        // Intentar obtener de localStorage como fallback
-        const localStorageToken = localStorage.getItem('token') || localStorage.getItem('auth_token');
-        if (localStorageToken) {
-          headers['Authorization'] = `Bearer ${localStorageToken}`;
-        }
-      }
-      
-      // Llamar a las dos APIs en paralelo CON TOKEN 
-      const [dashboardResponse, quickStatsResponse] = await Promise.all([
-        fetch('/api/admin/dashboard/stats', { headers }),
-        fetch('/api/admin/stats/quick', { headers }) 
+      // ✅ CORRECTO: Usar adminService que ya tiene la URL base configurada
+      const [dashboardData, quickStatsData] = await Promise.all([
+        adminService.getDashboardStats().catch(err => {
+          console.error('Error en getDashboardStats:', err);
+          throw err;
+        }),
+        adminService.getQuickStats().catch(err => {
+          console.warn('Quick stats no disponibles:', err.message);
+          return null; // No fallar si quickStats falla
+        })
       ]);
-
-      if (!dashboardResponse.ok) {
-        if (dashboardResponse.status === 401) {
-          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
-        }
-        if (dashboardResponse.status === 403) {
-          throw new Error('No tienes permisos de administrador.');
-        }
-        throw new Error(`Error dashboard: ${dashboardResponse.status}`);
-      }
-
-      if (!quickStatsResponse.ok) {
-        console.warn('No se pudieron obtener estadísticas rápidas');
-      }
-
-      const dashboardData = await dashboardResponse.json();
-      const quickStatsData = quickStatsResponse.ok 
-        ? await quickStatsResponse.json()
-        : null;      
+      
+      console.log('✅ Dashboard data recibida:', dashboardData);
+      console.log('✅ Quick stats recibidas:', quickStatsData);
       
       setStats(dashboardData);
-      setQuickStats(quickStatsData); // MANTENEMOS la actualización
+      setQuickStats(quickStatsData);
       
     } catch (err: any) {
-      console.error('Error fetching admin stats:', err);
+      console.error('❌ Error fetching admin stats:', err);
       
-      // Si es error de autenticación, mostrar mensaje específico
-      if (err.message.includes('Sesión expirada') || err.message.includes('No autorizado')) {
-        setError(err.message);
-      } else {
-        setError('Error al cargar las estadísticas del sistema');
+      // Extraer mensaje de error más descriptivo
+      let errorMessage = 'Error al cargar las estadísticas del sistema';
+      
+      // Verificar el tipo de error
+      if (err.response?.status === 401) {
+        errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'No tienes permisos de administrador.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'No se encontró el recurso solicitado. Verifica la configuración del backend.';
+      } else if (err.message?.includes('Network Error')) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
