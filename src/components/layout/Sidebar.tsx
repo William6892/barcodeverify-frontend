@@ -1,13 +1,13 @@
 // components/layout/Sidebar.tsx
 import { NavLink } from 'react-router-dom';
 import { 
-  BarChart,  // Dashboard primero
-  Package,   // Envíos
-  Camera,    // Escanear  
-  Truck,     // Transportadoras
-  Users,     // Usuarios
-  User,      // Mi Perfil
-  Bell,      // Notificaciones
+  BarChart,  
+  Package,   
+  Camera,    
+  Truck,     
+  Users,     
+  User,      
+  Bell,      
 } from 'lucide-react';
 
 interface SidebarProps {

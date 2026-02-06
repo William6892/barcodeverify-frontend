@@ -1,5 +1,5 @@
-// Primera línea del archivo - CORREGIDO
-import { useAuth } from '../context/AuthContext'; // <-- ¡ESTA ES LA LÍNEA QUE DEBES CAMBIAR!
+
+import { useAuth } from '../context/AuthContext';
 
 import { useState, useEffect } from 'react';
 import { 
@@ -14,7 +14,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-// Tipos basados en tu API del backend
+// Tipos basados en API 
 interface DashboardStats {
   period: {
     start: string;
@@ -61,7 +61,7 @@ interface DashboardStats {
   }>;
 }
 
-// MANTENEMOS la interfaz pero la USAMOS para que no dé error
+// interfaz pero la USA para que no dé error
 interface QuickStats {
   today: {
     shipments: number;
@@ -77,7 +77,7 @@ interface QuickStats {
 export default function AdminDashboardPage() {
   const { token, logout } = useAuth(); // Obtener token del contexto (removido 'user' que no se usaba)
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [quickStats, setQuickStats] = useState<QuickStats | null>(null); // MANTENEMOS el estado
+  const [quickStats, setQuickStats] = useState<QuickStats | null>(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,10 +103,10 @@ export default function AdminDashboardPage() {
         }
       }
       
-      // Llamar a las dos APIs en paralelo CON TOKEN - MANTENEMOS AMBAS
+      // Llamar a las dos APIs en paralelo CON TOKEN 
       const [dashboardResponse, quickStatsResponse] = await Promise.all([
         fetch('/api/admin/dashboard/stats', { headers }),
-        fetch('/api/admin/stats/quick', { headers }) // MANTENEMOS esta llamada
+        fetch('/api/admin/stats/quick', { headers }) 
       ]);
 
       if (!dashboardResponse.ok) {
@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
       transportCompanies: stats.topTransportCompanies.length,
       dailyScans,
       growthRate: parseFloat(growthRate),
-      // Añadimos datos de quickStats si están disponibles
+      // datos de quickStats si están disponibles
       todayShipments: quickStats?.today?.shipments || 0,
       activeUsersCount: quickStats?.system?.activeUsers || stats.summary.totalUsersActive,
       pendingShipmentsCount: quickStats?.system?.pendingShipments || pendingShipments,

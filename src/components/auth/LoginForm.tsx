@@ -32,17 +32,12 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      console.log('🔐 Login con username:', username);
-      
       const response = await authService.login({
         username: username,
         password: password
       });
       
-      console.log('✅ Login exitoso:', response);
-      
       if (!response.token || !response.user) {
-        console.error('❌ Respuesta incompleta:', response);
         setError('Respuesta del servidor inválida');
         return;
       }
@@ -52,14 +47,6 @@ export default function LoginForm() {
       
       login(response.user, response.token);
       
-      // CORREGIDO: roleIcon se usa en el console.log
-      const roleIcon = response.user.role === 'Admin' ? '👑' : 
-                      response.user.role === 'Scanner' ? '📱' : '👤';
-      const roleText = response.user.role === 'Admin' ? 'Administrador' : 
-                      response.user.role === 'Scanner' ? 'Escáner' : 'Usuario';
-      
-      console.log(`✅ ¡Bienvenido ${response.user.username}! Rol: ${roleIcon} ${roleText}`);
-      
       if (response.user.role === 'Admin') {
         navigate('/admin');
       } else {
@@ -67,8 +54,6 @@ export default function LoginForm() {
       }
       
     } catch (error: any) {
-      console.error('❌ Error en login:', error);
-      
       let errorMessage = 'Error al iniciar sesión';
       
       if (error.response) {
@@ -183,13 +168,6 @@ export default function LoginForm() {
             </>
           )}
         </button>
-      </div>
-
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-        <p className="font-semibold">💡 Credenciales de prueba:</p>
-        <p>Usuario: <span className="font-mono">angie</span></p>
-        <p>Contraseña: <span className="font-mono">angie123</span></p>
-        <p className="mt-1 text-xs">Rol: Usuario</p>
       </div>
     </form>
   );

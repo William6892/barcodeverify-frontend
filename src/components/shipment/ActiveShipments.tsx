@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Package, Truck, Play, RefreshCw, AlertCircle, CheckCircle, XCircle, Filter, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { shipmentService } from '../../services/api';
-// import { toast } from 'react-hot-toast'; // Eliminado si no se usa
+// import { toast } from 'react-hot-toast'; 
 import './ActiveShipments.css';
 
 type ShipmentStatus = 'Pending' | 'InProgress' | 'Completed' | 'Cancelled';
@@ -23,7 +23,7 @@ interface Shipment {
 
 interface ActiveShipmentsProps {
   onSelectShipment: (shipmentId: number, shipmentNumber: string) => void;
-  // onRefresh?: () => void; // Eliminado porque no se usa
+  // onRefresh?: () => void;
   showAll?: boolean;
   showFilters?: boolean;
 }
@@ -109,9 +109,6 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
       setShipments([]);
       
       // Solo mostrar toast si el componente toast está disponible
-      // if (error.response?.status === 401 && typeof toast !== 'undefined') {
-      //   toast.error('Sesión expirada. Por favor inicia sesión nuevamente.');
-      // }
       
     } finally {
       setLoading(false);
@@ -126,20 +123,14 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
     try {
       await shipmentService.start(shipmentNumber);
       // Mostrar mensaje de éxito si toast está disponible
-      // if (typeof toast !== 'undefined') {
-      //   toast.success(`Escaneo iniciado para ${shipmentNumber}`);
-      // } else {
       alert(`Escaneo iniciado para ${shipmentNumber}`);
-      // }
+
       onSelectShipment(shipmentId, shipmentNumber);
       loadShipments();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error iniciando escaneo';
-      // if (typeof toast !== 'undefined') {
-      //   toast.error(errorMsg);
-      // } else {
       alert(errorMsg);
-      // }
+
     }
   };
 
@@ -151,19 +142,13 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
     try {
       const response = await shipmentService.cancel(shipmentId);
       // Mostrar éxito
-      // if (typeof toast !== 'undefined') {
-      //   toast.success(response.message || 'Envío cancelado exitosamente');
-      // } else {
       alert(response.message || 'Envío cancelado exitosamente');
       // }
       await loadShipments();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error cancelando envío';
-      // if (typeof toast !== 'undefined') {
-      //   toast.error(errorMsg);
-      // } else {
       alert(errorMsg);
-      // }
+
     }
   };
 
