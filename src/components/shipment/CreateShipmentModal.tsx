@@ -116,8 +116,8 @@ export default function CreateShipmentModal({
     WORKING_HOURS: { start: 6, end: 22 },
     REQUIRED_DEPARTURE_TIME: true,
     REQUIRED_PRODUCTS: true,
-    MAX_BARCODE_LENGTH: 50,
-    MIN_BARCODE_LENGTH: 4
+    MAX_BARCODE_LENGTH: 100,
+    MIN_BARCODE_LENGTH: 1
   };
 
   // ====================================
@@ -592,6 +592,28 @@ export default function CreateShipmentModal({
     return undefined;
   };
 
+  // ✅ CORREGIDO: Validación de código de barras sin restricción de caracteres especiales
+  const validateBarcode = (barcode: string): string | undefined => {
+    if (!barcode || barcode.trim() === '') {
+      return 'Ingresa un código de barras';
+    }
+    
+    if (barcode.length < VALIDATION_CONFIG.MIN_BARCODE_LENGTH) {
+      return `El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres`;
+    }
+    
+    if (barcode.length > VALIDATION_CONFIG.MAX_BARCODE_LENGTH) {
+      return `El código no puede exceder los ${VALIDATION_CONFIG.MAX_BARCODE_LENGTH} caracteres`;
+    }
+    
+    // ✅ Solo validamos que no tenga caracteres de control
+    if (/[\x00-\x1F\x7F]/.test(barcode)) {
+      return 'El código contiene caracteres de control no permitidos';
+    }
+    
+    return undefined;
+  };
+
   const handleBulkAddProducts = () => {
     const barcodes = bulkBarcodeInput
       .split(/[\n,;]/)
@@ -610,10 +632,13 @@ export default function CreateShipmentModal({
     
     const newProducts: ProductItem[] = [];
     const duplicates: string[] = [];
+    const invalidBarcodes: string[] = [];
     
     barcodes.forEach(barcode => {
-      if (!/^[A-Za-z0-9\-_.]+$/.test(barcode)) {
-        alert(`Código inválido: ${barcode}`);
+      // ✅ Validar usando la nueva función
+      const validationError = validateBarcode(barcode);
+      if (validationError) {
+        invalidBarcodes.push(`${barcode} (${validationError})`);
         return;
       }
       
@@ -636,6 +661,10 @@ export default function CreateShipmentModal({
       }
     });
     
+    if (invalidBarcodes.length > 0) {
+      alert(`Los siguientes códigos son inválidos:\n${invalidBarcodes.join('\n')}`);
+    }
+    
     if (newProducts.length > 0) {
       setProducts([...products, ...newProducts]);
       alert(`${newProducts.length} nuevos productos agregados`);
@@ -653,32 +682,15 @@ export default function CreateShipmentModal({
     }
   };
 
+  // ✅ CORREGIDO: handleAddProduct usa la nueva validación sin restricciones de caracteres especiales
   const handleAddProduct = async () => {
     const barcode = barcodeInput.trim();
     
-    if (!barcode) {
-      setValidationErrors(prev => ({ ...prev, barcode: 'Ingresa un código de barras' }));
-      alert('Ingresa un código de barras');
-      return;
-    }
-    if (barcode.length < VALIDATION_CONFIG.MIN_BARCODE_LENGTH) {
-      setValidationErrors(prev => ({ ...prev, barcode: `El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres` }));
-      alert(`El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres`);
-      return;
-    }
-    if (barcode.length > VALIDATION_CONFIG.MAX_BARCODE_LENGTH) {
-      setValidationErrors(prev => ({ ...prev, barcode: `El código no puede exceder los ${VALIDATION_CONFIG.MAX_BARCODE_LENGTH} caracteres` }));
-      alert('El código es demasiado largo');
-      return;
-    }
-    if (!/^[A-Za-z0-9\-_.]+$/.test(barcode)) {
-      setValidationErrors(prev => ({ ...prev, barcode: 'Solo letras, números, guiones, puntos y guiones bajos' }));
-      alert('El código contiene caracteres inválidos');
-      return;
-    }
-    if (/^[-_.]|[-_.]$/.test(barcode)) {
-      setValidationErrors(prev => ({ ...prev, barcode: 'No puede empezar o terminar con caracteres especiales' }));
-      alert('El código no puede empezar o terminar con caracteres especiales');
+    // Validar usando la nueva función
+    const validationError = validateBarcode(barcode);
+    if (validationError) {
+      setValidationErrors(prev => ({ ...prev, barcode: validationError }));
+      alert(validationError);
       return;
     }
 
@@ -1063,7 +1075,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
 
         <form onSubmit={handleSubmit} className="p-8 space-y-8">
 
-          {/* ✅ PASO 1: Selección de transportadora */}
+          {/* PASO 1: Selección de transportadora */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
@@ -1169,7 +1181,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                 )}
               </div>
 
-              {/* ✅ CORREGIDO: Info de transportadora sin campos eliminados */}
+              {/* Info de transportadora sin campos eliminados */}
               {selectedCompany && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
                   <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
@@ -1554,7 +1566,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                       value={bulkBarcodeInput}
                       onChange={(e) => setBulkBarcodeInput(e.target.value)}
                       className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder={`Ej: \n1234567890\n9876543210\nABCD123456`}
+                      placeholder={`Ej: \n1234567890\n9876543210\nABCD123456\nPROD-001\nPROD#002`}
                     />
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-xs text-gray-500">
@@ -1572,7 +1584,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   </div>
                 )}
 
-                {/* Input individual */}
+                {/* ✅ CORREGIDO: Input individual sin restricción de caracteres especiales */}
                 <div className="mb-6">
                   <div className="flex gap-2 mb-3">
                     <div className="relative flex-1">
@@ -1592,7 +1604,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                             ? 'border-red-300 focus:ring-red-200' 
                             : 'border-gray-300 focus:ring-primary-500 focus:border-transparent'
                         }`}
-                        placeholder="Escribe el código de barras y presiona Enter"
+                        placeholder="Escribe el código de barras y presiona Enter (permite caracteres especiales: #, -, _, etc.)"
                         autoFocus
                       />
                       <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
@@ -1616,7 +1628,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   )}
                   <div className="flex items-center gap-2 text-sm text-gray-500 ml-1">
                     <Clock className="w-3 h-3" />
-                    <span>Presiona Enter para agregar • Mínimo {VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres</span>
+                    <span>Presiona Enter para agregar • Mínimo {VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres • Se permiten caracteres especiales (#, -, _, etc.)</span>
                   </div>
                 </div>
 
