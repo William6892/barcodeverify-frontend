@@ -1,7 +1,6 @@
 // src/services/api.ts
 import axios from 'axios';
 
-// ✅ CORREGIDO: URL de tu backend en Render
 const API_URL = import.meta.env.VITE_API_URL || 'https://barcodeverify-backend.onrender.com';
 
 export const api = axios.create({
@@ -68,18 +67,17 @@ export interface UpdateUserStatusDto {
   isActive: boolean;
 }
 
+// ✅ CORREGIDO: Eliminados driverName, licensePlate, phone
 export interface TransportCompany {
   id: number;
   name: string;
-  driverName: string;
-  licensePlate: string;
-  phone: string;
   isActive: boolean;
   createdAt: string;
   totalShipments?: number;
   totalProducts?: number;
 }
 
+// ✅ CORREGIDO: transportCompany solo tiene name
 export interface Shipment {
   id: number;
   shipmentNumber: string;
@@ -87,9 +85,6 @@ export interface Shipment {
   transportCompanyId: number;
   transportCompany?: {
     name: string;
-    driverName: string;
-    licensePlate: string;
-    phone: string;
   };
   productCount: number;
   createdAt: string;
@@ -172,67 +167,67 @@ export const authService = {
 };
 
 // ============================
-// SERVICIOS DE ENVÍOS (SHIPMENTS) - ✅ CORREGIDAS TODAS LAS RUTAS
+// SERVICIOS DE ENVÍOS (SHIPMENTS)
 // ============================
 
 export const shipmentService = {
   // Crear nuevo envío
   create: async (data: any) => {
-    const response = await api.post('/api/Shipment/create', data); // ✅ CORREGIDO
+    const response = await api.post('/api/Shipment/create', data);
     return response.data;
   },
   
   // Iniciar escaneo
   start: async (shipmentNumber: string) => {
-    const response = await api.post('/api/Shipment/start', { shipmentNumber }); // ✅ CORREGIDO
+    const response = await api.post('/api/Shipment/start', { shipmentNumber });
     return response.data;
   },
   
   // Escanear producto
   scanProduct: async (data: any) => {
-    const response = await api.post('/api/Shipment/scan', data); // ✅ CORREGIDO
+    const response = await api.post('/api/Shipment/scan', data);
     return response.data;
   },
   
   // Completar envío
   complete: async (shipmentId: number) => {
-    const response = await api.post(`/api/Shipment/complete/${shipmentId}`); // ✅ CORREGIDO
+    const response = await api.post(`/api/Shipment/complete/${shipmentId}`);
     return response.data;
   },
   
-  // ✅ Obtener envíos activos - CORREGIDO
+  // Obtener envíos activos
   getActive: async () => {
-    const response = await api.get('/api/Shipment/active'); // ✅ CAMBIADO DE "shipments" A "Shipment"
+    const response = await api.get('/api/Shipment/active');
     return response.data;
   },
   
   // Obtener TODOS los envíos
   getAll: async () => {
-    const response = await api.get('/api/Shipment/all'); // ✅ CORREGIDO
+    const response = await api.get('/api/Shipment/all');
     return response.data;
   },
   
   // Obtener envíos completados
   getCompleted: async () => {
-    const response = await api.get('/api/Shipment/completed'); // ✅ CORREGIDO
+    const response = await api.get('/api/Shipment/completed');
     return response.data;
   },
   
   // Obtener envíos cancelados
   getCancelled: async () => {
-    const response = await api.get('/api/Shipment/cancelled'); // ✅ CORREGIDO
+    const response = await api.get('/api/Shipment/cancelled');
     return response.data;
   },
   
   // Obtener por ID
   getById: async (id: number) => {
-    const response = await api.get(`/api/Shipment/${id}`); // ✅ CORREGIDO
+    const response = await api.get(`/api/Shipment/${id}`);
     return response.data;
   },
   
   // Obtener por número
   getByNumber: async (shipmentNumber: string) => {
-    const response = await api.get(`/api/Shipment/number/${shipmentNumber}`); // ✅ CORREGIDO
+    const response = await api.get(`/api/Shipment/number/${shipmentNumber}`);
     return response.data;
   },
   
@@ -243,35 +238,35 @@ export const shipmentService = {
     dateTo?: string;
     shipmentNumber?: string;
   }) => {
-    const response = await api.get('/api/Shipment/search', { params }); // ✅ CORREGIDO
+    const response = await api.get('/api/Shipment/search', { params });
     return response.data;
   },
   
   // Actualizar estado
   updateStatus: async (id: number, status: string) => {
-    const response = await api.patch(`/api/Shipment/${id}/status`, { status }); // ✅ CORREGIDO
+    const response = await api.patch(`/api/Shipment/${id}/status`, { status });
     return response.data;
   },
   
   // Cancelar envío (solo admin)
   cancel: async (id: number) => {
-    const response = await api.patch(`/api/Shipment/${id}/cancel`); // ✅ CORREGIDO
+    const response = await api.patch(`/api/Shipment/${id}/cancel`);
     return response.data;
   },
   
   // Obtener estadísticas
   getStats: async () => {
-    const response = await api.get('/api/Shipment/stats'); // ✅ CORREGIDO
+    const response = await api.get('/api/Shipment/stats');
     return response.data;
   },
 };
 
 // ============================
-// SERVICIOS DE PRODUCTOS - ✅ CORREGIDAS LAS RUTAS
+// SERVICIOS DE PRODUCTOS
 // ============================
 
 export const productService = {
-  // Escanear producto en un envío (ahora está en ShipmentController)
+  // Escanear producto en un envío (ShipmentController)
   scanProduct: async (data: { 
     shipmentId: number; 
     barcode: string; 
@@ -283,7 +278,7 @@ export const productService = {
     model?: string;
     serialNumber?: string;
   }) => {
-    const response = await api.post('/api/Shipment/scan', data); // ✅ MOVIDO A SHIPMENT
+    const response = await api.post('/api/Shipment/scan', data);
     return response.data;
   },
   
@@ -297,7 +292,7 @@ export const productService = {
   }) => {
     console.log('📤 [productService] Enviando:', data);
     try {
-      const response = await api.post('/api/Product/create-for-shipment', data); // ✅ VERIFICAR SI EXISTE
+      const response = await api.post('/api/Product/create-for-shipment', data);
       console.log('✅ [productService] Respuesta recibida');
       return response.data;
     } catch (error: any) {
@@ -308,126 +303,127 @@ export const productService = {
   
   // Obtener productos por envío
   getByShipment: async (shipmentId: number) => {
-    const response = await api.get(`/api/Product/shipment/${shipmentId}`); // ✅ VERIFICAR SI EXISTE
+    const response = await api.get(`/api/Product/shipment/${shipmentId}`);
     return response.data;
   },
   
   // Obtener todos los productos
   getAll: async (params?: any) => {
-    const response = await api.get('/api/Product', { params }); // ✅ VERIFICAR SI EXISTE
+    const response = await api.get('/api/Product', { params });
     return response.data;
   },
   
   // Buscar productos
   search: async (params: any) => {
-    const response = await api.get('/api/Product/search', { params }); // ✅ VERIFICAR SI EXISTE
+    const response = await api.get('/api/Product/search', { params });
     return response.data;
   },
   
   // Obtener por código de barras
   getByBarcode: async (barcode: string) => {
-    const response = await api.get(`/api/Product/barcode/${barcode}`); // ✅ VERIFICAR SI EXISTE
+    const response = await api.get(`/api/Product/barcode/${barcode}`);
     return response.data;
   },
   
   // Crear producto (requiere Admin)
   create: async (data: any) => {
-    const response = await api.post('/api/Product', data); // ✅ VERIFICAR SI EXISTE
+    const response = await api.post('/api/Product', data);
     return response.data;
   },
   
   // Obtener producto por ID
   getById: async (id: number) => {
-    const response = await api.get(`/api/Product/${id}`); // ✅ VERIFICAR SI EXISTE
+    const response = await api.get(`/api/Product/${id}`);
     return response.data;
   },
   
   // Actualizar producto
   update: async (id: number, data: any) => {
-    const response = await api.put(`/api/Product/${id}`, data); // ✅ VERIFICAR SI EXISTE
+    const response = await api.put(`/api/Product/${id}`, data);
     return response.data;
   },
   
   // Eliminar producto
   delete: async (id: number) => {
-    const response = await api.delete(`/api/Product/${id}`); // ✅ VERIFICAR SI EXISTE
+    const response = await api.delete(`/api/Product/${id}`);
     return response.data;
   },
   
   // Obtener estadísticas
   getStats: async () => {
-    const response = await api.get('/api/Product/stats'); // ✅ VERIFICAR SI EXISTE
+    const response = await api.get('/api/Product/stats');
     return response.data;
   },
   
   // Obtener categorías de un envío
   getShipmentCategoryCounts: async (shipmentId: number) => {
-    const response = await api.get(`/api/Product/shipment/${shipmentId}/categories`); // ✅ VERIFICAR SI EXISTE
+    const response = await api.get(`/api/Product/shipment/${shipmentId}/categories`);
     return response.data;
   },
 };
 
 // ============================
-// SERVICIOS DE TRANSPORTADORAS - ✅ CORREGIDAS
+// SERVICIOS DE TRANSPORTADORAS
 // ============================
 
 export const transportService = {
   getAll: async (activeOnly: boolean = true) => {
     const response = await api.get('/api/TransportCompany', { 
       params: { activeOnly } 
-    }); // ✅ CORREGIDO
+    });
     return response.data;
   },
   
   getById: async (id: number) => {
-    const response = await api.get(`/api/TransportCompany/${id}`); // ✅ CORREGIDO
+    const response = await api.get(`/api/TransportCompany/${id}`);
     return response.data;
   },
   
-  searchByPlate: async (plate: string) => {
+  // ✅ CORREGIDO: searchByPlate eliminado, ahora searchByName
+  searchByName: async (name: string) => {
     const response = await api.get(`/api/TransportCompany/search`, { 
-      params: { plate } 
-    }); // ✅ CORREGIDO
+      params: { name } 
+    });
     return response.data;
   },
   
-  createForUser: async (data: any) => {
-    const response = await api.post('/api/TransportCompany/user', data); // ✅ CORREGIDO
+  createForUser: async (data: { name: string }) => {
+    const response = await api.post('/api/TransportCompany/user', data);
     return response.data;
   },
   
-  createForAdmin: async (data: any) => {
-    const response = await api.post('/api/TransportCompany', data); // ✅ CORREGIDO
+  createForAdmin: async (data: { name: string }) => {
+    const response = await api.post('/api/TransportCompany', data);
     return response.data;
   },
   
-  update: async (id: number, data: any) => {
-    const response = await api.put(`/api/TransportCompany/${id}`, data); // ✅ CORREGIDO
+  update: async (id: number, data: { name?: string; isActive?: boolean }) => {
+    const response = await api.put(`/api/TransportCompany/${id}`, data);
     return response.data;
   },
   
   delete: async (id: number) => {
-    const response = await api.delete(`/api/TransportCompany/${id}`); // ✅ CORREGIDO
+    const response = await api.delete(`/api/TransportCompany/${id}`);
     return response.data;
   },
   
   toggleStatus: async (id: number) => {
-    const response = await api.patch(`/api/TransportCompany/${id}/toggle-status`); // ✅ CORREGIDO
+    const response = await api.patch(`/api/TransportCompany/${id}/toggle-status`);
     return response.data;
   },
   
   // Alias para crear
-  create: async (data: any) => {
+  create: async (data: { name: string }) => {
     return await transportService.createForUser(data);
   },
 };
 
 // ============================
-// SERVICIOS DE ADMINISTRACIÓN - ✅ NOTA: VERIFICAR SI EXISTEN
+// SERVICIOS DE ADMINISTRACIÓN
 // ============================
 
 export const adminService = {
-  // Dashboard - VERIFICAR SI ESTOS ENDPOINTS EXISTEN
+  // Dashboard
   getDashboardStats: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
@@ -442,7 +438,7 @@ export const adminService = {
     return response.data;
   },
   
-  // Usuarios - VERIFICAR SI EXISTEN
+  // Usuarios
   getUsers: async () => {
     const response = await api.get('/api/admin/users');
     return response.data;
@@ -463,23 +459,18 @@ export const adminService = {
     return response.data;
   },
   
-  // Transportadoras - VERIFICAR SI EXISTEN
+  // Transportadoras — ✅ CORREGIDO: solo campo name
   getTransportCompanies: async () => {
     const response = await api.get('/api/Admin/transport-companies');
     return response.data;
   },
   
-  createTransportCompany: async (data: {
-    name: string;
-    driverName: string;
-    licensePlate: string;
-    phone: string;
-  }) => {
+  createTransportCompany: async (data: { name: string }) => {
     const response = await api.post('/api/Admin/transport-companies', data);
     return response.data;
   },
   
-  // Productos - VERIFICAR SI EXISTEN
+  // Productos
   searchProducts: async (params: {
     barcode?: string;
     name?: string;
@@ -493,7 +484,7 @@ export const adminService = {
     return response.data;
   },
   
-  // Reportes - VERIFICAR SI EXISTEN
+  // Reportes
   generateShipmentReport: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
@@ -621,18 +612,13 @@ export const formatRelativeTime = (dateString: string): string => {
   }
 };
 
-// Notas importantes:
-// 1. Los endpoints de ProductController pueden no existir (marcados como "VERIFICAR SI EXISTE")
-// 2. Los endpoints de AdminController pueden no existir (marcados como "VERIFICAR SI EXISTEN")
-// 3. Para escanear productos usa: shipmentService.scanProduct() NO productService.scanProduct()
-
 export default {
   api,
   authService,
-  shipmentService, // ✅ ESTE ES EL SERVICIO PRINCIPAL PARA SHIPMENTS
-  productService,  // ⚠️ VERIFICAR SI EXISTEN ESTOS ENDPOINTS
+  shipmentService,
+  productService,
   transportService,
-  adminService,    // ⚠️ VERIFICAR SI EXISTEN ESTOS ENDPOINTS
+  adminService,
   userManagementService,
   handleApiError,
   formatToColombiaTime,

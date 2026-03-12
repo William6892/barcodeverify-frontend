@@ -5,9 +5,6 @@ import {
   Package, 
   Calendar, 
   Hash, 
-  User, 
-  Car, 
-  Phone,
   Plus, 
   Check, 
   Info, 
@@ -33,14 +30,12 @@ import {
   Zap,  
   Lock
 } from 'lucide-react';
-import { shipmentService, transportService, productService } from '../../services/api';
+import { shipmentService, transportService } from '../../services/api';
 
+// ✅ CORREGIDO: Eliminados driverName, licensePlate, phone
 interface TransportCompany {
   id: number;
   name: string;
-  driverName: string;
-  licensePlate: string;
-  phone: string;
   isActive: boolean;
   maxCapacity?: number;
   currentLoad?: number;
@@ -94,13 +89,11 @@ export default function CreateShipmentModal({
   const [step, setStep] = useState(1);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   
-  // Estado para productos
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [bulkBarcodeInput, setBulkBarcodeInput] = useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Estados mejorados para validaciones
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [showProductsWarning, setShowProductsWarning] = useState(false);
   const [confirmNoProducts, setConfirmNoProducts] = useState(false);
@@ -113,7 +106,6 @@ export default function CreateShipmentModal({
   const [isCheckingCapacity, setIsCheckingCapacity] = useState(false);
   const [showDepartureTimeWarning, setShowDepartureTimeWarning] = useState(false);
 
-  // ✅ Configuración de validaciones
   const VALIDATION_CONFIG = {
     MIN_PRODUCTS: 1,
     MAX_PRODUCTS: 100,
@@ -129,46 +121,36 @@ export default function CreateShipmentModal({
   };
 
   // ====================================
-  // FUNCIONES FALTANTES QUE NECESITAMOS
+  // FUNCIONES DE VALIDACIÓN Y MANEJO
   // ====================================
 
-  // ✅ 1. Función para validar transportadora
   const validateTransportCompany = (companyId: number | ''): string | undefined => {
     if (!companyId) {
       return 'Debes seleccionar una transportadora';
     }
-    
     const companyExists = transportCompanies.some(c => c.id === companyId);
     if (!companyExists) {
       return 'La transportadora seleccionada no existe o está inactiva';
     }
-    
     return undefined;
   };
 
-  // ✅ 2. Función para manejar cambio de transportadora
   const handleCompanyChange = (companyId: number) => {
     setSelectedCompanyId(companyId);
     setValidationErrors(prev => ({ ...prev, transportCompany: undefined }));
-    
-    // Verificar capacidad si hay productos
     if (products.length > 0) {
       setTimeout(() => checkCapacity(), 100);
     }
   };
 
-  // ✅ 3. Función para manejar cambio de número de envío
   const handleShipmentNumberChange = (value: string) => {
     setShipmentNumber(value);
-    
-    // Validar en tiempo real
     if (value.trim()) {
       const error = validateShipmentNumberUnique(value);
       setValidationErrors(prev => ({ ...prev, shipmentNumber: error }));
     }
   };
 
-  // ✅ 4. Función para manejar cambio de hora de salida
   const handleDepartureTimeChange = (value: string) => {
     setEstimatedDeparture(value);
     setValidationErrors(prev => ({ ...prev, departureTime: undefined }));
@@ -176,7 +158,6 @@ export default function CreateShipmentModal({
     setConfirmNoDepartureTime(false);
   };
 
-  // ✅ 5. Función handleKeyPress para código de barras
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -184,23 +165,19 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ 6. Función para cambiar cantidad de productos
   const handleQuantityChange = (id: number, delta: number) => {
     setProducts(prevProducts => 
       prevProducts.map(p => {
         if (p.id === id) {
           const newQuantity = p.quantity + delta;
-          
           if (newQuantity < 1) {
             alert('La cantidad mínima es 1');
             return p;
           }
-          
           if (newQuantity > 999) {
             alert('La cantidad máxima por producto es 999');
             return p;
           }
-          
           return { ...p, quantity: newQuantity };
         }
         return p;
@@ -208,17 +185,14 @@ export default function CreateShipmentModal({
     );
   };
 
-  // ✅ 7. Función para eliminar producto
   const handleRemoveProduct = (id: number) => {
     const productToRemove = products.find(p => p.id === id);
-    
     if (!productToRemove) return;
     
     const shouldRemove = window.confirm(
       `¿Estás seguro de eliminar el producto ${productToRemove?.barcode}?\n\n` +
       `Cantidad: ${productToRemove?.quantity} unidad${productToRemove?.quantity !== 1 ? 'es' : ''}`
     );
-    
     if (!shouldRemove) return;
     
     setProducts(prev => prev.filter(p => p.id !== id));
@@ -229,15 +203,11 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ 8. Función para limpiar todos los productos
   const handleClearAllProducts = () => {
     if (products.length === 0) return;
-    
     const shouldClear = window.confirm(
-      `¿Estás seguro de eliminar todos los productos (${products.length})?\n\n` +
-      `Esta acción no se puede deshacer.`
+      `¿Estás seguro de eliminar todos los productos (${products.length})?\n\nEsta acción no se puede deshacer.`
     );
-    
     if (shouldClear) {
       setProducts([]);
       setConfirmNoProducts(false);
@@ -246,7 +216,6 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ 9. Función handleNextStep
   const handleNextStep = () => {
     if (step === 1) {
       if (!validateStep1()) {
@@ -263,14 +232,12 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ 10. Función handlePreviousStep
   const handlePreviousStep = () => {
     if (step > 1) {
       setStep(step - 1);
     }
   };
 
-  // ✅ 11. Función para resetear formulario
   const resetForm = () => {
     setShipmentNumber('');
     setEstimatedDeparture('');
@@ -288,7 +255,7 @@ export default function CreateShipmentModal({
     generateShipmentNumber();
   };
 
-  // ✅ 12. Función para crear productos en backend
+  // ✅ CORREGIDO: Usa shipmentService.scanProduct en lugar de productService.create (Admin-only)
   const createProductsInBackend = async (shipmentId: number) => {
     if (products.length === 0) {
       console.log('📝 No hay productos para crear');
@@ -301,46 +268,36 @@ export default function CreateShipmentModal({
     for (const product of products) {
       try {
         const productData = {
+          shipmentId: shipmentId,
           barcode: product.barcode,
           name: product.name,
           quantity: product.quantity,
           category: product.category || 'General',
-          shipmentId: shipmentId
         };
 
-        console.log('📤 Datos que voy a enviar:', productData);
-        
-        console.log('📤 Llamando a productService.create...');
-        
-        const response = await productService.create(productData);
-        
-        console.log('✅ Respuesta exitosa:', response);
+        console.log('📤 Escaneando producto en envío:', productData);
+        const response = await shipmentService.scanProduct(productData);
+        console.log('✅ Producto escaneado correctamente:', response);
         createdProducts.push(response);
-        console.log(`✅ Producto ${product.barcode} creado correctamente`);
         
       } catch (error: any) {
-        console.error('❌ ERROR COMPLETO:', error);
+        console.error('❌ ERROR al escanear producto:', error);
         
-        // Muestra información detallada del error
         if (error.response) {
           console.error('❌ Status:', error.response.status);
           console.error('❌ Datos del error:', error.response.data);
-          console.error('❌ Headers:', error.response.headers);
-        } else if (error.request) {
-          console.error('❌ No hubo respuesta del servidor');
-        } else {
-          console.error('❌ Error al configurar la petición:', error.message);
         }
         
-        // Muestra mensaje de error al usuario
         if (error.response?.status === 403) {
-          alert(`No tienes permiso para crear productos (error 403). Contacta al administrador.`);
+          alert(`No tienes permiso para agregar productos (error 403). Contacta al administrador.`);
         } else if (error.response?.status === 401) {
           alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
         } else if (error.response?.status === 409) {
-          alert(`El producto ${product.barcode} ya existe en el sistema.`);
+          // Producto duplicado — no es error crítico, continuar
+          console.warn(`Producto ${product.barcode} ya existe, se actualizó la cantidad`);
+          createdProducts.push({ barcode: product.barcode, updated: true });
         } else {
-          alert(`Error al crear producto ${product.barcode}: ${error.message}`);
+          alert(`Error al agregar producto ${product.barcode}: ${error.message}`);
         }
       }
     }
@@ -349,10 +306,9 @@ export default function CreateShipmentModal({
   };
 
   // ====================================
-  // FUNCIONES EXISTENTES (ya en tu código)
+  // EFECTOS
   // ====================================
 
-  // Cargar transportadoras
   useEffect(() => {
     if (isOpen) {
       loadTransportCompanies();
@@ -379,7 +335,10 @@ export default function CreateShipmentModal({
     }
   }, [selectedCompanyId, products]);
 
-  // ✅ Generar número de envío automático
+  // ====================================
+  // FUNCIONES AUXILIARES
+  // ====================================
+
   const generateShipmentNumber = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -396,12 +355,10 @@ export default function CreateShipmentModal({
     ]);
   };
 
-  // ✅ Cargar slots de tiempo disponibles
   const loadAvailableTimeSlots = () => {
     const now = new Date();
     const slots: TimeSlot[] = [];
     
-    // Generar slots para hoy y mañana
     for (let day = 0; day < 2; day++) {
       const date = new Date();
       date.setDate(date.getDate() + day);
@@ -463,7 +420,6 @@ export default function CreateShipmentModal({
         }));
       }
     } catch (error: any) {      
-      
       let errorMessage = 'Error conectando con el servidor';
       if (error.response?.status === 404) {
         errorMessage = 'Ruta del API no encontrada. Verifica la configuración.';
@@ -485,7 +441,6 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ Verificar capacidad de la transportadora
   const checkCapacity = async () => {
     if (!selectedCompanyId || products.length === 0) return;
     
@@ -494,7 +449,6 @@ export default function CreateShipmentModal({
       const company = transportCompanies.find(c => c.id === selectedCompanyId);
       if (!company?.maxCapacity) return;
       
-      // Calcular volumen estimado de productos
       const estimatedVolume = products.reduce((sum, p) => sum + (p.quantity * (p.volume || 1)), 0);
       const capacityPercentage = (estimatedVolume / company.maxCapacity) * 100;
       
@@ -518,7 +472,6 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ Resetear todas las validaciones
   const resetValidations = () => {
     setValidationErrors({});
     setShowProductsWarning(false);
@@ -528,12 +481,10 @@ export default function CreateShipmentModal({
     setConfirmNoDepartureTime(false);
   };
 
-  // ✅ Validación estricta de hora de salida requerida
   const validateDepartureTimeRequired = (time: string): string | undefined => {
     if (!time && VALIDATION_CONFIG.REQUIRED_DEPARTURE_TIME && !confirmNoDepartureTime) {
       return 'La hora de salida estimada es requerida';
     }
-    
     if (!time) {
       return confirmNoDepartureTime ? undefined : 'Debes especificar una hora de salida';
     }
@@ -545,20 +496,17 @@ export default function CreateShipmentModal({
       return 'Fecha y hora inválidas';
     }
     
-    // No puede ser en el pasado (con margen de 1 hora para ajustes)
     const oneHourAgo = new Date(now.getTime() - 60 * 60000);
     if (selectedDate < oneHourAgo) {
       return 'La hora de salida no puede ser en el pasado. Mínimo 1 hora en el futuro.';
     }
     
-    // No puede ser más de X días en el futuro
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + VALIDATION_CONFIG.MAX_DAYS_IN_FUTURE);
     if (selectedDate > maxDate) {
       return `La hora de salida no puede ser más de ${VALIDATION_CONFIG.MAX_DAYS_IN_FUTURE} días en el futuro`;
     }
     
-    // Validar hora laboral
     const hour = selectedDate.getHours();
     const minutes = selectedDate.getMinutes();
     
@@ -566,12 +514,10 @@ export default function CreateShipmentModal({
       return `La hora debe estar entre las ${VALIDATION_CONFIG.WORKING_HOURS.start}:00 y las ${VALIDATION_CONFIG.WORKING_HOURS.end}:00`;
     }
     
-    // Validar minutos (solo en intervalos de 15 minutos)
     if (minutes % 15 !== 0) {
       return 'Los minutos deben ser en intervalos de 15 minutos (00, 15, 30, 45)';
     }
     
-    // Validar que no sea domingo
     if (selectedDate.getDay() === 0) {
       return 'No se permiten envíos los domingos';
     }
@@ -579,41 +525,31 @@ export default function CreateShipmentModal({
     return undefined;
   };
 
-  // ✅ Validación de número de envío única
   const validateShipmentNumberUnique = (number: string): string | undefined => {
     const trimmed = number.trim();
     
-    if (!trimmed) {
-      return 'El número de envío es requerido';
-    }
-    
+    if (!trimmed) return 'El número de envío es requerido';
     if (trimmed.length < VALIDATION_CONFIG.MIN_SHIPMENT_NUMBER_LENGTH) {
       return `El número debe tener al menos ${VALIDATION_CONFIG.MIN_SHIPMENT_NUMBER_LENGTH} caracteres`;
     }
-    
     if (trimmed.length > VALIDATION_CONFIG.MAX_SHIPMENT_NUMBER_LENGTH) {
       return `El número no puede exceder los ${VALIDATION_CONFIG.MAX_SHIPMENT_NUMBER_LENGTH} caracteres`;
     }
-    
     if (!/^[A-Za-z0-9\-_.]+$/.test(trimmed)) {
       return 'Solo letras, números, guiones, puntos y guiones bajos';
     }
-    
     if (/^[-_.]|[-_.]$/.test(trimmed)) {
       return 'No puede empezar o terminar con guiones, puntos o guiones bajos';
     }
-    
     if (/[-_.]{2,}/.test(trimmed)) {
       return 'No puede tener caracteres especiales consecutivos';
     }
     
-    // ✅ Verificar unicidad con envíos existentes
     if (existingShipments.length > 0) {
       const isDuplicate = existingShipments.some(shipment => 
         shipment.shipmentNumber === trimmed ||
         shipment.data?.shipmentNumber === trimmed
       );
-      
       if (isDuplicate) {
         return 'Este número de envío ya existe. Por favor, usa un número único.';
       }
@@ -622,7 +558,6 @@ export default function CreateShipmentModal({
     return undefined;
   };
 
-  // ✅ Validación estricta de productos requeridos
   const validateProductsRequired = (): string | undefined => {
     if (products.length === 0) {
       if (VALIDATION_CONFIG.REQUIRED_PRODUCTS && !confirmNoProducts) {
@@ -634,43 +569,29 @@ export default function CreateShipmentModal({
       return undefined;
     }
     
-    if (products.length < VALIDATION_CONFIG.MIN_PRODUCTS) {
-      return `Debes agregar al menos ${VALIDATION_CONFIG.MIN_PRODUCTS} producto${VALIDATION_CONFIG.MIN_PRODUCTS !== 1 ? 's' : ''}`;
-    }
-    
     if (products.length > VALIDATION_CONFIG.MAX_PRODUCTS) {
       return `No puedes agregar más de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos diferentes`;
     }
     
-    // Validar que todos los productos tengan cantidad > 0
     const invalidProduct = products.find(p => p.quantity < 1);
     if (invalidProduct) {
       return `El producto ${invalidProduct.barcode} debe tener al menos 1 unidad`;
     }
     
-    // Validar códigos de barras únicos
     const barcodes = products.map(p => p.barcode);
     const uniqueBarcodes = new Set(barcodes);
     if (barcodes.length !== uniqueBarcodes.size) {
       return 'Hay códigos de barras duplicados en la lista';
     }
     
-    // Validar límite total de unidades
     const totalUnits = products.reduce((sum, p) => sum + p.quantity, 0);
     if (totalUnits > VALIDATION_CONFIG.MAX_TOTAL_UNITS) {
       return `El límite máximo total es de ${VALIDATION_CONFIG.MAX_TOTAL_UNITS} unidades`;
     }
     
-    // Validar que no haya productos con cantidad 0
-    const zeroQuantityProducts = products.filter(p => p.quantity === 0);
-    if (zeroQuantityProducts.length > 0) {
-      return 'Algunos productos tienen cantidad 0. Ajusta las cantidades o elimínalos.';
-    }
-    
     return undefined;
   };
 
-  // ✅ Agregar productos por lotes
   const handleBulkAddProducts = () => {
     const barcodes = bulkBarcodeInput
       .split(/[\n,;]/)
@@ -691,7 +612,6 @@ export default function CreateShipmentModal({
     const duplicates: string[] = [];
     
     barcodes.forEach(barcode => {
-      // Validar formato del código
       if (!/^[A-Za-z0-9\-_.]+$/.test(barcode)) {
         alert(`Código inválido: ${barcode}`);
         return;
@@ -700,13 +620,11 @@ export default function CreateShipmentModal({
       const existingProduct = products.find(p => p.barcode === barcode);
       
       if (existingProduct) {
-        // Incrementar cantidad si ya existe
         if (existingProduct.quantity < 999) {
           existingProduct.quantity += 1;
           duplicates.push(barcode);
         }
       } else {
-        // Crear nuevo producto
         newProducts.push({
           id: Date.now() + Math.random(),
           barcode,
@@ -730,57 +648,36 @@ export default function CreateShipmentModal({
     setBulkBarcodeInput('');
     setShowBulkInput(false);
     
-    // Ocultar advertencia si se agregan productos
     if (showProductsWarning) {
       setShowProductsWarning(false);
     }
   };
 
-  // ✅ Función para agregar productos con más validaciones
   const handleAddProduct = async () => {
     const barcode = barcodeInput.trim();
     
     if (!barcode) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        barcode: 'Ingresa un código de barras' 
-      }));
+      setValidationErrors(prev => ({ ...prev, barcode: 'Ingresa un código de barras' }));
       alert('Ingresa un código de barras');
       return;
     }
-
     if (barcode.length < VALIDATION_CONFIG.MIN_BARCODE_LENGTH) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        barcode: `El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres` 
-      }));
+      setValidationErrors(prev => ({ ...prev, barcode: `El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres` }));
       alert(`El código debe tener al menos ${VALIDATION_CONFIG.MIN_BARCODE_LENGTH} caracteres`);
       return;
     }
-
     if (barcode.length > VALIDATION_CONFIG.MAX_BARCODE_LENGTH) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        barcode: `El código no puede exceder los ${VALIDATION_CONFIG.MAX_BARCODE_LENGTH} caracteres` 
-      }));
+      setValidationErrors(prev => ({ ...prev, barcode: `El código no puede exceder los ${VALIDATION_CONFIG.MAX_BARCODE_LENGTH} caracteres` }));
       alert('El código es demasiado largo');
       return;
     }
-
     if (!/^[A-Za-z0-9\-_.]+$/.test(barcode)) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        barcode: 'Solo letras, números, guiones, puntos y guiones bajos' 
-      }));
+      setValidationErrors(prev => ({ ...prev, barcode: 'Solo letras, números, guiones, puntos y guiones bajos' }));
       alert('El código contiene caracteres inválidos');
       return;
     }
-
     if (/^[-_.]|[-_.]$/.test(barcode)) {
-      setValidationErrors(prev => ({ 
-        ...prev, 
-        barcode: 'No puede empezar o terminar con caracteres especiales' 
-      }));
+      setValidationErrors(prev => ({ ...prev, barcode: 'No puede empezar o terminar con caracteres especiales' }));
       alert('El código no puede empezar o terminar con caracteres especiales');
       return;
     }
@@ -792,25 +689,17 @@ export default function CreateShipmentModal({
         alert('No puedes agregar más de 999 unidades del mismo producto');
         return;
       }
-      
       setProducts(products.map(p => 
         p.id === existingProduct.id 
           ? { ...p, quantity: newQuantity }
           : p
       ));
       alert(`Cantidad aumentada: ${barcode} (x${newQuantity})`);
-      
-      if (showProductsWarning) {
-        setShowProductsWarning(false);
-      }
-      
-      setValidationErrors(prev => ({ ...prev, barcode: undefined }));
     } else {
       if (products.length >= VALIDATION_CONFIG.MAX_PRODUCTS) {
         alert(`No puedes agregar más de ${VALIDATION_CONFIG.MAX_PRODUCTS} productos diferentes`);
         return;
       }
-
       const newProduct: ProductItem = {
         id: Date.now(),
         barcode,
@@ -819,28 +708,17 @@ export default function CreateShipmentModal({
         category: 'General',
         scannedAt: new Date().toLocaleTimeString()
       };
-      
       setProducts([...products, newProduct]);
       alert(`Producto agregado: ${barcode}`);
-      
-      if (showProductsWarning) {
-        setShowProductsWarning(false);
-      }
-      
-      if (confirmNoProducts) {
-        setConfirmNoProducts(false);
-      }
-      
-      setValidationErrors(prev => ({ ...prev, barcode: undefined }));
     }
     
+    if (showProductsWarning) setShowProductsWarning(false);
+    if (confirmNoProducts) setConfirmNoProducts(false);
+    setValidationErrors(prev => ({ ...prev, barcode: undefined }));
     setBarcodeInput('');
-    if (barcodeInputRef.current) {
-      barcodeInputRef.current.focus();
-    }
+    if (barcodeInputRef.current) barcodeInputRef.current.focus();
   };
 
-  // ✅ Confirmación obligatoria para continuar sin productos
   const confirmContinueWithoutProducts = () => {
     const confirmed = window.confirm(
       '🚫 CONFIRMACIÓN OBLIGATORIA\n\n' +
@@ -857,10 +735,7 @@ export default function CreateShipmentModal({
     );
     
     if (confirmed) {
-      const supervisorCode = prompt(
-        'Ingresa el código de aprobación del supervisor:',
-        ''
-      );
+      const supervisorCode = prompt('Ingresa el código de aprobación del supervisor:', '');
       
       if (supervisorCode === 'APPROVE-2024' || supervisorCode === '123456') {
         setConfirmNoProducts(true);
@@ -873,7 +748,6 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ Confirmación obligatoria para continuar sin hora de salida
   const confirmContinueWithoutDepartureTime = () => {
     const confirmed = window.confirm(
       '⏰ CONFIRMACIÓN REQUERIDA\n\n' +
@@ -893,7 +767,6 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ Validación del paso 1
   const validateStep1 = (): boolean => {
     const errors: ValidationErrors = {};
     let isValid = true;
@@ -903,7 +776,6 @@ export default function CreateShipmentModal({
       errors.transportCompany = transportError;
       isValid = false;
     }
-    
     if (capacityWarning && validationErrors.capacity) {
       errors.capacity = validationErrors.capacity;
       isValid = false;
@@ -913,7 +785,6 @@ export default function CreateShipmentModal({
     return isValid;
   };
 
-  // ✅ Validación del paso 2
   const validateStep2 = (): boolean => {
     const errors: ValidationErrors = {};
     let isValid = true;
@@ -935,7 +806,6 @@ export default function CreateShipmentModal({
     return isValid;
   };
 
-  // ✅ Validación del paso 3
   const validateStep3 = (): boolean => {
     const errors: ValidationErrors = {};
     let isValid = true;
@@ -944,7 +814,6 @@ export default function CreateShipmentModal({
     if (productsError) {
       errors.products = productsError;
       isValid = false;
-      
       if (products.length === 0 && !confirmNoProducts) {
         setShowProductsWarning(true);
       }
@@ -954,25 +823,19 @@ export default function CreateShipmentModal({
     return isValid;
   };
 
-  // ✅ Validación final antes de enviar
   const validateFinalSubmission = (): boolean => {
-    // Validar todos los pasos
     const step1Valid = validateStep1();
     const step2Valid = validateStep2();
     const step3Valid = validateStep3();
     
-    if (!step1Valid || !step2Valid || !step3Valid) {
-      return false;
-    }
+    if (!step1Valid || !step2Valid || !step3Valid) return false;
     
-    // Validaciones cruzadas adicionales
     if (products.length > 0 && !estimatedDeparture && !confirmNoDepartureTime) {
       alert('Los envíos con productos requieren hora de salida');
       setShowDepartureTimeWarning(true);
       return false;
     }
     
-    // Validar capacidad final
     if (validationErrors.capacity) {
       alert('Excede la capacidad de la transportadora seleccionada');
       return false;
@@ -981,7 +844,6 @@ export default function CreateShipmentModal({
     return true;
   };
 
-  // ✅ Función para seleccionar slot de tiempo
   const selectTimeSlot = (slotStart: string) => {
     setEstimatedDeparture(slotStart);
     setValidationErrors(prev => ({ ...prev, departureTime: undefined }));
@@ -990,7 +852,7 @@ export default function CreateShipmentModal({
     alert(`Hora de salida establecida: ${new Date(slotStart).toLocaleString('es-ES')}`);
   };
 
-  // ✅ Manejar envío del formulario
+  // ✅ CORREGIDO: handleSubmit envía solo los campos que el backend acepta
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -999,13 +861,11 @@ export default function CreateShipmentModal({
       return;
     }
     
-    // Validación final estricta
     if (!validateFinalSubmission()) {
       alert('❌ No se puede crear el envío. Corrige todos los errores.');
       return;
     }
     
-    // ✅ Confirmación final estricta
     const confirmationDetails = `
 📦 RESUMEN DEL ENVÍO
 ────────────────────
@@ -1014,12 +874,6 @@ Número de envío: ${shipmentNumber}
 Hora de salida: ${estimatedDeparture ? new Date(estimatedDeparture).toLocaleString('es-ES') : 'No especificada'}
 Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0)} unidades)
 ────────────────────
-
-⚠️ POLÍTICAS A CONFIRMAR:
-1. ${VALIDATION_CONFIG.REQUIRED_PRODUCTS ? '✓ Productos requeridos' : '⚠️ Sin productos confirmado'}
-2. ${estimatedDeparture ? '✓ Hora de salida especificada' : '⚠️ Sin hora de salida confirmado'}
-3. ✓ Transportadora seleccionada
-4. ✓ Número de envío único
 
 ¿Confirmar creación del envío?
 `.trim();
@@ -1034,25 +888,14 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
     setLoading(true);
 
     try {
-      // 1️⃣ Crear el envío
+      // 1️⃣ Crear el envío — ✅ SOLO campos que el backend acepta
       const shipmentData: any = {
         transportCompanyId: selectedCompanyId,
         shipmentNumber: shipmentNumber.trim(),
-        requiresProducts: products.length > 0,
-        status: products.length > 0 ? 'PENDING' : 'DRAFT'
       };
 
       if (estimatedDeparture) {
         shipmentData.estimatedDeparture = new Date(estimatedDeparture).toISOString();
-        shipmentData.hasDepartureTime = true;
-      } else {
-        shipmentData.hasDepartureTime = false;
-        shipmentData.requiresDepartureTimeUpdate = true;
-      }
-
-      if (products.length === 0 && confirmNoProducts) {
-        shipmentData.specialApproval = true;
-        shipmentData.approvalType = 'NO_PRODUCTS';
       }
 
       const shipmentResponse = await shipmentService.create(shipmentData);
@@ -1065,20 +908,27 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
         throw new Error('No se pudo obtener el ID del envío creado');
       }
 
-      // 2️⃣ Crear productos si existen
+      // 2️⃣ Agregar productos usando scanProduct (no requiere Admin)
       let createdProducts = [];
       if (products.length > 0) {
+        // El envío debe estar en estado InProgress para escanear
+        // Primero lo iniciamos
+        try {
+          await shipmentService.start(shipmentNumber.trim());
+        } catch (startError: any) {
+          console.warn('No se pudo iniciar el envío automáticamente:', startError.message);
+          // Continuar de todas formas — el usuario puede iniciarlo manualmente
+        }
+        
         createdProducts = await createProductsInBackend(shipmentId);
       }
 
-      // 3️⃣ Enviar notificación de éxito (usando alert en lugar de toast)
       const successMessage = products.length > 0
         ? `✅ Envío creado exitosamente con ${products.length} productos`
         : '⚠️ Envío creado SIN PRODUCTOS (aprobación especial)';
       
       alert(successMessage);
       
-      // 4️⃣ Pasar datos completos
       const fullShipmentData = {
         ...shipmentResponse,
         id: shipmentId,
@@ -1089,13 +939,9 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
         hasDepartureTime: !!estimatedDeparture,
         shipmentNumber: shipmentNumber,
         transportCompany: selectedCompany,
-        specialApproval: products.length === 0,
-        requiresAttention: !estimatedDeparture || products.length === 0
       };
       
       onSuccess(fullShipmentData);
-      
-      // 5️⃣ Cerrar y resetear
       onClose();
       resetForm();
       
@@ -1106,7 +952,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
           errorMessage = error.response.data.message;
         } else if (error.response.data.errors) {
           const validationErrors = Object.values(error.response.data.errors).flat();
-          errorMessage = validationErrors.join(', ');
+          errorMessage = (validationErrors as string[]).join(', ');
         }
       } else if (error.message) {
         errorMessage = error.message;
@@ -1119,11 +965,13 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
     }
   };
 
-  // ✅ Obtener transportadora seleccionada
+  // ====================================
+  // DERIVADOS
+  // ====================================
+
   const selectedCompany = transportCompanies.find(c => c.id === selectedCompanyId);
   const totalProductsCount = products.reduce((sum, product) => sum + product.quantity, 0);
 
-  // ✅ Calcular si hay errores críticos
   const hasCriticalErrors = () => {
     if (step === 1 && (!selectedCompanyId || validationErrors.transportCompany || validationErrors.capacity)) return true;
     if (step === 2 && (!shipmentNumber || validationErrors.shipmentNumber || 
@@ -1137,7 +985,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header con gradiente */}
+        {/* Header */}
         <div className="relative p-8 border-b">
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-primary-500 via-purple-500 to-blue-500 rounded-t-2xl"></div>
           
@@ -1179,7 +1027,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
             </button>
           </div>
           
-          {/* Steps indicator con validaciones */}
+          {/* Steps indicator */}
           <div className="mt-6 flex items-center justify-between">
             <div className={`flex items-center ${step >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary-100' : 'bg-gray-100'} ${!selectedCompanyId && step === 1 ? 'border-2 border-red-300' : ''}`}>
@@ -1214,7 +1062,8 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-8">
-          {/* ✅ PASO 1: Selección de transportadora con validaciones */}
+
+          {/* ✅ PASO 1: Selección de transportadora */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
@@ -1226,7 +1075,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   <span className="text-red-500">*</span>
                 </div>
                 
-                {/* Validación de transportadora */}
                 {validationErrors.transportCompany && (
                   <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
@@ -1241,7 +1089,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   </div>
                 )}
 
-                {/* Validación de capacidad */}
                 {capacityWarning && (
                   <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
@@ -1302,26 +1149,13 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                                 </span>
                               )}
                             </div>
-                            <div className="mt-2 space-y-1">
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <User className="w-3 h-3" />
-                                <span>{company.driverName}</span>
+                            {/* ✅ CORREGIDO: Eliminadas filas de driverName, licensePlate, phone */}
+                            {company.maxCapacity && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                                <Package className="w-3 h-3" />
+                                <span>Capacidad: {company.maxCapacity} unidades</span>
                               </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <Car className="w-3 h-3" />
-                                <span className="font-mono">{company.licensePlate}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <Phone className="w-3 h-3" />
-                                <span>{company.phone}</span>
-                              </div>
-                              {company.maxCapacity && (
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <Package className="w-3 h-3" />
-                                  <span>Capacidad: {company.maxCapacity} unidades</span>
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
                           {selectedCompanyId === company.id && (
                             <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center">
@@ -1335,6 +1169,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                 )}
               </div>
 
+              {/* ✅ CORREGIDO: Info de transportadora sin campos eliminados */}
               {selectedCompany && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
                   <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
@@ -1347,16 +1182,12 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                       <p className="font-bold text-gray-900">{selectedCompany.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-blue-600 font-medium">Conductor</p>
-                      <p className="font-bold text-gray-900">{selectedCompany.driverName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-blue-600 font-medium">Placa</p>
-                      <p className="font-mono font-bold text-gray-900">{selectedCompany.licensePlate}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-blue-600 font-medium">Teléfono</p>
-                      <p className="font-bold text-gray-900">{selectedCompany.phone}</p>
+                      <p className="text-sm text-blue-600 font-medium">Estado</p>
+                      <p className="font-bold text-gray-900">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800">
+                          Activa
+                        </span>
+                      </p>
                     </div>
                     {selectedCompany.maxCapacity && (
                       <div className="col-span-2">
@@ -1407,7 +1238,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
             </div>
           )}
 
-          {/* ✅ PASO 2: Detalles del envío con hora de salida obligatoria */}
+          {/* PASO 2: Detalles del envío */}
           {step === 2 && (
             <div className="space-y-6">
               {/* Número de envío */}
@@ -1453,7 +1284,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   </div>
                 )}
                 
-                {/* Sugerencias de números */}
                 {shipmentNumberSuggestions.length > 0 && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-600 mb-1">Sugerencias disponibles:</p>
@@ -1477,7 +1307,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                 )}
               </div>
 
-              {/* Hora de salida ESTIMADA - OBLIGATORIA */}
+              {/* Hora de salida */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -1499,7 +1329,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   )}
                 </div>
 
-                {/* Slots de tiempo disponibles */}
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-2">Horarios disponibles recomendados:</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -1527,7 +1356,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   </div>
                 </div>
 
-                {/* Input manual de fecha/hora */}
                 <div className="relative">
                   <input
                     type="datetime-local"
@@ -1540,7 +1368,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                     }`}
                     min={(() => {
                       const now = new Date();
-                      now.setMinutes(now.getMinutes() + 60); // Mínimo 1 hora en el futuro
+                      now.setMinutes(now.getMinutes() + 60);
                       return now.toISOString().slice(0, 16);
                     })()}
                     max={(() => {
@@ -1548,14 +1376,13 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                       maxDate.setDate(maxDate.getDate() + VALIDATION_CONFIG.MAX_DAYS_IN_FUTURE);
                       return maxDate.toISOString().slice(0, 16);
                     })()}
-                    step="900" // Intervalos de 15 minutos
+                    step="900"
                   />
                   <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
                     <Calendar className={`w-5 h-5 ${validationErrors.departureTime ? 'text-red-400' : 'text-gray-400'}`} />
                   </div>
                 </div>
 
-                {/* Mensajes de validación */}
                 {validationErrors.departureTime && (
                   <div className="mt-2 flex items-center gap-2 text-red-600 text-sm">
                     <AlertCircle className="w-4 h-4" />
@@ -1570,9 +1397,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                       <div>
                         <p className="text-sm text-yellow-800 font-medium">
                           ⚠️ La hora de salida es requerida para envíos con productos
-                        </p>
-                        <p className="text-xs text-yellow-700 mt-1">
-                          Si no especificas la hora, el envío quedará como "Pendiente de programación"
                         </p>
                         <button
                           type="button"
@@ -1601,50 +1425,41 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-yellow-700">
                       <AlertTriangle className="w-4 h-4" />
-                      <span className="text-sm">
-                        ⚠️ Continuarás sin especificar hora de salida
-                      </span>
+                      <span className="text-sm">⚠️ Continuarás sin especificar hora de salida</span>
                     </div>
                   </div>
                 )}
-
-                <p className="text-sm text-gray-500 mt-2 ml-1">
-                  Obligatorio para envíos con productos • Mínimo 1 hora en el futuro • Intervalos de 15 minutos
-                </p>
               </div>
 
-              {/* Resumen del paso 2 */}
+              {/* Resumen paso 2 */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
                 <h3 className="font-semibold text-green-800 mb-4 flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" />
                   Resumen del Envío
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div>
                     <p className="text-sm text-green-600 font-medium">Transportadora</p>
                     <p className="font-bold text-gray-900">{selectedCompany?.name || 'No seleccionada'}</p>
                   </div>
-                  <div className="space-y-2">
+                  <div>
                     <p className="text-sm text-green-600 font-medium">Número de envío</p>
                     <p className={`font-mono font-bold ${shipmentNumber ? 'text-gray-900' : 'text-red-500'}`}>
                       {shipmentNumber || 'Requerido'}
                     </p>
                   </div>
-                  <div className="space-y-2">
+                  <div>
                     <p className="text-sm text-green-600 font-medium">Hora de salida</p>
                     <p className="font-bold text-gray-900">
                       {estimatedDeparture 
-                        ? new Date(estimatedDeparture).toLocaleString('es-ES', {
-                            dateStyle: 'medium',
-                            timeStyle: 'short'
-                          })
+                        ? new Date(estimatedDeparture).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })
                         : confirmNoDepartureTime 
                           ? '⚠️ No especificada'
                           : '❌ Requerida'
                       }
                     </p>
                   </div>
-                  <div className="space-y-2">
+                  <div>
                     <p className="text-sm text-green-600 font-medium">Estado</p>
                     <p className="font-bold text-gray-900">
                       {estimatedDeparture ? '✅ Programado' : '⚠️ Pendiente'}
@@ -1678,7 +1493,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
             </div>
           )}
 
-          {/* ✅ PASO 3: Productos con validación estricta */}
+          {/* PASO 3: Productos */}
           {step === 3 && (
             <div className="space-y-6">
               <div>
@@ -1691,23 +1506,18 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                         : 'Productos del Envío'
                       }
                     </label>
-                    {VALIDATION_CONFIG.REQUIRED_PRODUCTS && (
-                      <span className="text-red-500">*</span>
-                    )}
+                    {VALIDATION_CONFIG.REQUIRED_PRODUCTS && <span className="text-red-500">*</span>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowBulkInput(!showBulkInput)}
-                      className="text-sm text-primary-600 hover:text-primary-800 flex items-center gap-1"
-                    >
-                      {showBulkInput ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                      {showBulkInput ? 'Ocultar' : 'Agregar por lotes'}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkInput(!showBulkInput)}
+                    className="text-sm text-primary-600 hover:text-primary-800 flex items-center gap-1"
+                  >
+                    {showBulkInput ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    {showBulkInput ? 'Ocultar' : 'Agregar por lotes'}
+                  </button>
                 </div>
 
-                {/* ✅ ADVERTENCIA: Productos requeridos */}
                 {VALIDATION_CONFIG.REQUIRED_PRODUCTS && products.length === 0 && !confirmNoProducts && (
                   <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
@@ -1719,28 +1529,19 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                         <p className="text-sm text-red-700 mt-1">
                           No puedes crear un envío sin productos. Esta es una política de la empresa.
                         </p>
-                        <div className="mt-3 space-y-2">
-                          <p className="text-xs text-red-600 font-medium">EXCEPCIONES PERMITIDAS:</p>
-                          <ul className="text-xs text-red-700 space-y-1 ml-2">
-                            <li>• Envíos de documentación (requiere código de supervisor)</li>
-                            <li>• Pruebas del sistema (solo para administradores)</li>
-                            <li>• Casos especiales aprobados por gerencia</li>
-                          </ul>
-                          <button
-                            type="button"
-                            onClick={confirmContinueWithoutProducts}
-                            className="mt-2 text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                          >
-                            <Lock className="w-3 h-3" />
-                            Solicitar excepción (requiere aprobación)
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={confirmContinueWithoutProducts}
+                          className="mt-2 text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                        >
+                          <Lock className="w-3 h-3" />
+                          Solicitar excepción (requiere aprobación)
+                        </button>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Input por lotes */}
                 {showBulkInput && (
                   <div className="mb-4 border border-gray-300 rounded-xl p-4">
                     <div className="flex items-center gap-2 mb-3">
@@ -1753,10 +1554,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                       value={bulkBarcodeInput}
                       onChange={(e) => setBulkBarcodeInput(e.target.value)}
                       className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Ej: 
-1234567890
-9876543210
-ABCD123456"
+                      placeholder={`Ej: \n1234567890\n9876543210\nABCD123456`}
                     />
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-xs text-gray-500">
@@ -1774,7 +1572,7 @@ ABCD123456"
                   </div>
                 )}
 
-                {/* Input individual de código de barras */}
+                {/* Input individual */}
                 <div className="mb-6">
                   <div className="flex gap-2 mb-3">
                     <div className="relative flex-1">
@@ -1822,7 +1620,7 @@ ABCD123456"
                   </div>
                 </div>
 
-                {/* Resumen de productos */}
+                {/* Resumen productos */}
                 <div className={`mb-4 p-4 border rounded-xl transition-colors ${
                   products.length === 0 && !confirmNoProducts
                     ? 'bg-red-50 border-red-200'
@@ -1833,42 +1631,20 @@ ABCD123456"
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${
-                        products.length === 0 && !confirmNoProducts
-                          ? 'bg-red-100'
-                          : confirmNoProducts
-                            ? 'bg-yellow-100'
-                            : 'bg-green-100'
+                        products.length === 0 && !confirmNoProducts ? 'bg-red-100' : confirmNoProducts ? 'bg-yellow-100' : 'bg-green-100'
                       }`}>
                         <Package className={`w-4 h-4 ${
-                          products.length === 0 && !confirmNoProducts
-                            ? 'text-red-600'
-                            : confirmNoProducts
-                              ? 'text-yellow-600'
-                              : 'text-green-600'
+                          products.length === 0 && !confirmNoProducts ? 'text-red-600' : confirmNoProducts ? 'text-yellow-600' : 'text-green-600'
                         }`} />
                       </div>
                       <div>
                         <p className={`font-medium ${
-                          products.length === 0 && !confirmNoProducts
-                            ? 'text-red-800'
-                            : confirmNoProducts
-                              ? 'text-yellow-800'
-                              : 'text-green-800'
+                          products.length === 0 && !confirmNoProducts ? 'text-red-800' : confirmNoProducts ? 'text-yellow-800' : 'text-green-800'
                         }`}>
-                          {products.length === 0 
-                            ? 'SIN PRODUCTOS' 
-                            : `${products.length} producto${products.length !== 1 ? 's' : ''} en lista`
-                          }
-                          {products.length === 0 && VALIDATION_CONFIG.REQUIRED_PRODUCTS && (
-                            <span className="ml-2 text-sm font-normal text-red-600">(REQUERIDO)</span>
-                          )}
+                          {products.length === 0 ? 'SIN PRODUCTOS' : `${products.length} producto${products.length !== 1 ? 's' : ''} en lista`}
                         </p>
                         <p className={`text-xs ${
-                          products.length === 0 && !confirmNoProducts
-                            ? 'text-red-600'
-                            : confirmNoProducts
-                              ? 'text-yellow-600'
-                              : 'text-green-600'
+                          products.length === 0 && !confirmNoProducts ? 'text-red-600' : confirmNoProducts ? 'text-yellow-600' : 'text-green-600'
                         }`}>
                           {confirmNoProducts 
                             ? '⚠️ EXCEPCIÓN APROBADA: Se creará sin productos'
@@ -1894,40 +1670,6 @@ ABCD123456"
                       </div>
                     )}
                   </div>
-                  
-                  {/* Progreso de capacidad si hay productos */}
-                  {products.length > 0 && selectedCompany?.maxCapacity && (
-                    <div className="mt-4">
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Uso de capacidad</span>
-                        <span>
-                          {Math.min(100, Math.round((totalProductsCount / selectedCompany.maxCapacity) * 100))}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            totalProductsCount > selectedCompany.maxCapacity * 0.9 
-                              ? 'bg-red-600' 
-                              : totalProductsCount > selectedCompany.maxCapacity * 0.7
-                              ? 'bg-yellow-500'
-                              : 'bg-green-500'
-                          }`}
-                          style={{ 
-                            width: `${Math.min(100, (totalProductsCount / selectedCompany.maxCapacity) * 100)}%` 
-                          }}
-                        ></div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Capacidad máxima: {selectedCompany.maxCapacity} unidades
-                        {totalProductsCount > selectedCompany.maxCapacity && (
-                          <span className="text-red-600 font-bold ml-2">
-                            ❌ EXCEDE CAPACIDAD
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Lista de productos */}
@@ -1947,11 +1689,6 @@ ABCD123456"
                         </>
                       )}
                     </div>
-                    {products.length > 0 && (
-                      <div className="text-xs text-gray-500">
-                        Máx. {VALIDATION_CONFIG.MAX_PRODUCTS} productos • {VALIDATION_CONFIG.MAX_TOTAL_UNITS} unidades
-                      </div>
-                    )}
                   </div>
                   
                   <div className="max-h-64 overflow-y-auto">
@@ -1967,15 +1704,6 @@ ABCD123456"
                             : 'Agrega productos o confirma continuar sin ellos'
                           }
                         </p>
-                        {!VALIDATION_CONFIG.REQUIRED_PRODUCTS && (
-                          <button
-                            type="button"
-                            onClick={confirmContinueWithoutProducts}
-                            className="mt-3 text-sm border border-primary-600 text-primary-600 px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors"
-                          >
-                            Continuar sin productos
-                          </button>
-                        )}
                       </div>
                     ) : (
                       <div className="divide-y">
@@ -1984,20 +1712,11 @@ ABCD123456"
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-mono font-bold text-gray-900">
-                                    {product.barcode}
-                                  </span>
-                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                                    {product.category}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    {product.scannedAt}
-                                  </span>
+                                  <span className="font-mono font-bold text-gray-900">{product.barcode}</span>
+                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">{product.category}</span>
+                                  <span className="text-xs text-gray-500">{product.scannedAt}</span>
                                 </div>
                                 <p className="text-gray-700 font-medium">{product.name}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Se creará con: {product.quantity} unidad{product.quantity !== 1 ? 'es' : ''}
-                                </p>
                               </div>
                               
                               <div className="flex items-center gap-3 ml-4">
@@ -2010,9 +1729,7 @@ ABCD123456"
                                   >
                                     <Minus className="w-3 h-3" />
                                   </button>
-                                  <span className="px-2 font-bold min-w-[24px] text-center">
-                                    {product.quantity}
-                                  </span>
+                                  <span className="px-2 font-bold min-w-[24px] text-center">{product.quantity}</span>
                                   <button
                                     type="button"
                                     onClick={() => handleQuantityChange(product.id, 1)}
@@ -2026,7 +1743,6 @@ ABCD123456"
                                   type="button"
                                   onClick={() => handleRemoveProduct(product.id)}
                                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                  title="Eliminar producto"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -2040,7 +1756,7 @@ ABCD123456"
                 </div>
               </div>
 
-              {/* ✅ Panel de requisitos y políticas */}
+              {/* Panel de requisitos */}
               <div className="border border-gray-200 rounded-xl p-4">
                 <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                   <FileWarning className="w-4 h-4" />
@@ -2048,73 +1764,33 @@ ABCD123456"
                 </h4>
                 <div className="space-y-3">
                   <div className={`flex items-center gap-2 ${products.length >= VALIDATION_CONFIG.MIN_PRODUCTS ? 'text-green-600' : 'text-red-600'}`}>
-                    {products.length >= VALIDATION_CONFIG.MIN_PRODUCTS ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
+                    {products.length >= VALIDATION_CONFIG.MIN_PRODUCTS ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                     <span className="text-sm">
-                      {VALIDATION_CONFIG.MIN_PRODUCTS} producto{VALIDATION_CONFIG.MIN_PRODUCTS !== 1 ? 's' : ''} mínimo: 
-                      <strong> {products.length}/{VALIDATION_CONFIG.MIN_PRODUCTS}</strong>
+                      Mínimo {VALIDATION_CONFIG.MIN_PRODUCTS} producto: <strong>{products.length}/{VALIDATION_CONFIG.MIN_PRODUCTS}</strong>
                     </span>
                   </div>
-                  
                   <div className={`flex items-center gap-2 ${estimatedDeparture || confirmNoDepartureTime ? 'text-green-600' : 'text-red-600'}`}>
-                    {estimatedDeparture || confirmNoDepartureTime ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
+                    {estimatedDeparture || confirmNoDepartureTime ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                     <span className="text-sm">
-                      Hora de salida especificada: 
-                      <strong> {estimatedDeparture ? '✓ Sí' : confirmNoDepartureTime ? '⚠️ Excepción' : '✗ No'}</strong>
+                      Hora de salida: <strong>{estimatedDeparture ? '✓ Sí' : confirmNoDepartureTime ? '⚠️ Excepción' : '✗ No'}</strong>
                     </span>
                   </div>
-                  
                   <div className={`flex items-center gap-2 ${selectedCompanyId ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedCompanyId ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
+                    {selectedCompanyId ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                     <span className="text-sm">
-                      Transportadora seleccionada: 
-                      <strong> {selectedCompanyId ? '✓ Sí' : '✗ No'}</strong>
+                      Transportadora seleccionada: <strong>{selectedCompanyId ? '✓ Sí' : '✗ No'}</strong>
                     </span>
                   </div>
-                  
                   <div className={`flex items-center gap-2 ${shipmentNumber.length >= VALIDATION_CONFIG.MIN_SHIPMENT_NUMBER_LENGTH ? 'text-green-600' : 'text-red-600'}`}>
-                    {shipmentNumber.length >= VALIDATION_CONFIG.MIN_SHIPMENT_NUMBER_LENGTH ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
+                    {shipmentNumber.length >= VALIDATION_CONFIG.MIN_SHIPMENT_NUMBER_LENGTH ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                     <span className="text-sm">
-                      Número de envío válido: 
-                      <strong> {shipmentNumber.length >= VALIDATION_CONFIG.MIN_SHIPMENT_NUMBER_LENGTH ? '✓ Sí' : '✗ No'}</strong>
+                      Número de envío válido: <strong>{shipmentNumber.length >= VALIDATION_CONFIG.MIN_SHIPMENT_NUMBER_LENGTH ? '✓ Sí' : '✗ No'}</strong>
                     </span>
                   </div>
-                  
-                  {selectedCompany?.maxCapacity && (
-                    <div className={`flex items-center gap-2 ${totalProductsCount <= selectedCompany.maxCapacity ? 'text-green-600' : 'text-red-600'}`}>
-                      {totalProductsCount <= selectedCompany.maxCapacity ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <Ban className="w-4 h-4" />
-                      )}
-                      <span className="text-sm">
-                        Capacidad de transportadora: 
-                        <strong> {totalProductsCount}/{selectedCompany.maxCapacity} unidades</strong>
-                        {totalProductsCount > selectedCompany.maxCapacity && (
-                          <span className="ml-2 text-red-600">(EXCEDE CAPACIDAD)</span>
-                        )}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* ✅ Resumen final con todas las validaciones */}
+              {/* Resumen final */}
               <div className={`border rounded-xl p-6 ${
                 hasCriticalErrors() 
                   ? 'bg-red-50 border-red-200'
@@ -2123,19 +1799,9 @@ ABCD123456"
                     : 'bg-green-50 border-green-200'
               }`}>
                 <h3 className={`font-semibold mb-4 flex items-center gap-2 ${
-                  hasCriticalErrors() 
-                    ? 'text-red-800'
-                    : confirmNoProducts || confirmNoDepartureTime
-                      ? 'text-yellow-800'
-                      : 'text-green-800'
+                  hasCriticalErrors() ? 'text-red-800' : confirmNoProducts || confirmNoDepartureTime ? 'text-yellow-800' : 'text-green-800'
                 }`}>
-                  {hasCriticalErrors() ? (
-                    <Ban className="w-5 h-5" />
-                  ) : confirmNoProducts || confirmNoDepartureTime ? (
-                    <AlertTriangle className="w-5 h-5" />
-                  ) : (
-                    <CheckCircle className="w-5 h-5" />
-                  )}
+                  {hasCriticalErrors() ? <Ban className="w-5 h-5" /> : confirmNoProducts || confirmNoDepartureTime ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
                   {hasCriticalErrors() 
                     ? '❌ NO SE PUEDE CREAR EL ENVÍO' 
                     : confirmNoProducts || confirmNoDepartureTime
@@ -2143,85 +1809,58 @@ ABCD123456"
                       : '✅ ENVÍO LISTO PARA CREAR'
                   }
                 </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Transportadora</p>
-                      <p className="font-bold text-gray-900">{selectedCompany?.name || 'No seleccionada'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Número de envío</p>
-                      <p className="font-mono font-bold text-gray-900">{shipmentNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Productos</p>
-                      <p className="font-bold text-gray-900">
-                        {products.length > 0 
-                          ? `${products.length} producto${products.length !== 1 ? 's' : ''}`
-                          : confirmNoProducts
-                            ? '⚠️ SIN PRODUCTOS (Excepción)'
-                            : '❌ REQUERIDO'
-                        }
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Hora de salida</p>
-                      <p className="font-bold text-gray-900">
-                        {estimatedDeparture 
-                          ? new Date(estimatedDeparture).toLocaleString('es-ES', { timeStyle: 'short' })
-                          : confirmNoDepartureTime
-                            ? '⚠️ NO ESPECIFICADA'
-                            : '❌ REQUERIDA'
-                        }
-                      </p>
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Transportadora</p>
+                    <p className="font-bold text-gray-900">{selectedCompany?.name || 'No seleccionada'}</p>
                   </div>
-                  
-                  {hasCriticalErrors() && (
-                    <div className="p-3 bg-red-100 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-800 font-medium">
-                        ❌ Corrige los siguientes errores antes de continuar:
-                      </p>
-                      <ul className="text-xs text-red-700 mt-1 ml-4 list-disc">
-                        {!selectedCompanyId && <li>Selecciona una transportadora</li>}
-                        {!shipmentNumber && <li>Ingresa un número de envío</li>}
-                        {!estimatedDeparture && !confirmNoDepartureTime && <li>Especifica hora de salida</li>}
-                        {products.length === 0 && !confirmNoProducts && VALIDATION_CONFIG.REQUIRED_PRODUCTS && <li>Agrega al menos 1 producto</li>}
-                        {validationErrors.capacity && <li>Excede capacidad de transportadora</li>}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {(confirmNoProducts || confirmNoDepartureTime) && !hasCriticalErrors() && (
-                    <div className="p-3 bg-yellow-100 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800 font-medium">
-                        ⚠️ Este envío tiene excepciones aprobadas:
-                      </p>
-                      <ul className="text-xs text-yellow-700 mt-1 ml-4 list-disc">
-                        {confirmNoProducts && <li>Se creará sin productos (aprobación especial)</li>}
-                        {confirmNoDepartureTime && <li>No tiene hora de salida especificada</li>}
-                        <li>Estas excepciones serán registradas en el sistema</li>
-                        <li>El supervisor será notificado</li>
-                      </ul>
-                    </div>
-                  )}
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Número de envío</p>
+                    <p className="font-mono font-bold text-gray-900">{shipmentNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Productos</p>
+                    <p className="font-bold text-gray-900">
+                      {products.length > 0 
+                        ? `${products.length} producto${products.length !== 1 ? 's' : ''}`
+                        : confirmNoProducts ? '⚠️ SIN PRODUCTOS (Excepción)' : '❌ REQUERIDO'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Hora de salida</p>
+                    <p className="font-bold text-gray-900">
+                      {estimatedDeparture 
+                        ? new Date(estimatedDeparture).toLocaleString('es-ES', { timeStyle: 'short' })
+                        : confirmNoDepartureTime ? '⚠️ NO ESPECIFICADA' : '❌ REQUERIDA'
+                      }
+                    </p>
+                  </div>
                 </div>
+                
+                {hasCriticalErrors() && (
+                  <div className="mt-4 p-3 bg-red-100 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800 font-medium">❌ Corrige los siguientes errores:</p>
+                    <ul className="text-xs text-red-700 mt-1 ml-4 list-disc">
+                      {!selectedCompanyId && <li>Selecciona una transportadora</li>}
+                      {!shipmentNumber && <li>Ingresa un número de envío</li>}
+                      {!estimatedDeparture && !confirmNoDepartureTime && <li>Especifica hora de salida</li>}
+                      {products.length === 0 && !confirmNoProducts && VALIDATION_CONFIG.REQUIRED_PRODUCTS && <li>Agrega al menos 1 producto</li>}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    handlePreviousStep();
-                    setShowProductsWarning(false);
-                  }}
+                  onClick={() => { handlePreviousStep(); setShowProductsWarning(false); }}
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center gap-2 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Atrás
                 </button>
                 <div className="flex gap-3">
-                  {/* Botón de validación */}
                   <button
                     type="button"
                     onClick={() => {
@@ -2237,7 +1876,6 @@ ABCD123456"
                     Validar todo
                   </button>
                   
-                  {/* Botón principal de creación */}
                   <button
                     type="submit"
                     disabled={loading || isSubmitting || hasCriticalErrors()}
@@ -2272,7 +1910,7 @@ ABCD123456"
           )}
         </form>
         
-        {/* ✅ Footer con indicadores de validación */}
+        {/* Footer */}
         <div className="border-t bg-gray-50 p-4">
           <div className="text-xs text-gray-500 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -2280,50 +1918,21 @@ ABCD123456"
               <span className={hasCriticalErrors() ? 'text-red-600 font-bold' : ''}>
                 {hasCriticalErrors() 
                   ? '❌ ERRORES CRÍTICOS - No se puede crear el envío'
-                  : `Paso ${step} de 3 - ${step === 1 ? 'Selección de transportadora' : step === 2 ? 'Detalles del envío' : 'Productos'}`
+                  : `Paso ${step} de 3 — ${step === 1 ? 'Selección de transportadora' : step === 2 ? 'Detalles del envío' : 'Productos'}`
                 }
               </span>
             </div>
-            <div className="flex items-center gap-4">
-              {products.length > 0 && (
-                <span className={`font-medium ${
-                  products.length === 0 && VALIDATION_CONFIG.REQUIRED_PRODUCTS 
-                    ? 'text-red-600' 
-                    : 'text-gray-600'
-                }`}>
-                  {products.length} producto{products.length !== 1 ? 's' : ''} • {totalProductsCount} unidad{totalProductsCount !== 1 ? 'es' : ''}
-                </span>
-              )}
-              <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  estimatedDeparture 
-                    ? 'bg-green-100 text-green-800' 
-                    : confirmNoDepartureTime
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                }`}>
-                  {estimatedDeparture 
-                    ? 'Hora especificada' 
-                    : confirmNoDepartureTime
-                      ? 'Sin hora (Excepción)'
-                      : 'Hora requerida'
-                  }
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  products.length > 0 
-                    ? 'bg-green-100 text-green-800' 
-                    : confirmNoProducts
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                }`}>
-                  {products.length > 0 
-                    ? `${products.length} productos` 
-                    : confirmNoProducts
-                      ? 'Sin productos (Excepción)'
-                      : 'Productos requeridos'
-                  }
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                estimatedDeparture ? 'bg-green-100 text-green-800' : confirmNoDepartureTime ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {estimatedDeparture ? 'Hora especificada' : confirmNoDepartureTime ? 'Sin hora (Excepción)' : 'Hora requerida'}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                products.length > 0 ? 'bg-green-100 text-green-800' : confirmNoProducts ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {products.length > 0 ? `${products.length} productos` : confirmNoProducts ? 'Sin productos (Excepción)' : 'Productos requeridos'}
+              </span>
             </div>
           </div>
         </div>

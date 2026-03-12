@@ -9,18 +9,12 @@ import './css/TransportCompaniesPage.css';
 interface TransportCompany {
   id: number;
   name: string;
-  driverName: string;
-  licensePlate: string;
-  phone?: string;
   isActive: boolean;
   createdAt: string;
 }
 
 interface EditFormData {
   name: string;
-  driverName: string;
-  licensePlate: string;
-  phone: string;
 }
 
 export default function TransportCompaniesPage() {
@@ -30,12 +24,7 @@ export default function TransportCompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<TransportCompany | null>(null);
-  const [editFormData, setEditFormData] = useState<EditFormData>({
-    name: '',
-    driverName: '',
-    licensePlate: '',
-    phone: ''
-  });
+  const [editFormData, setEditFormData] = useState<EditFormData>({ name: '' });
   const [isEditing, setIsEditing] = useState(false);
 
   const isAdmin = user?.role === 'Admin';
@@ -43,14 +32,12 @@ export default function TransportCompaniesPage() {
   const loadCompanies = async () => {
     try {
       setLoading(true);
-      const response = await transportService.getAll();      
-      
+      const response = await transportService.getAll();
       if (Array.isArray(response)) {
         setCompanies(response);
       }
     } catch (error: any) {
       console.error('Error:', error);
-      
       if (error.response?.status === 403) {
         toast.error('No tienes permisos para ver transportadoras');
       } else {
@@ -65,11 +52,9 @@ export default function TransportCompaniesPage() {
     loadCompanies();
   }, []);
 
-  // Crear transportadora
   const handleCreateTransportCompany = async (data: any) => {
     try {
       let response;
-      
       if (isAdmin) {
         response = await transportService.createForAdmin(data);
         toast.success('Transportadora creada (modo Admin)');
@@ -77,16 +62,13 @@ export default function TransportCompaniesPage() {
         response = await transportService.createForUser(data);
         toast.success('Transportadora creada exitosamente');
       }
-      
       loadCompanies();
       return { success: true, data: response };
-      
     } catch (error: any) {
       console.error('Error creando transportadora:', error);
-      
       if (error.response?.status === 409) {
-        toast.error('Ya existe una transportadora con esta placa');
-        return { success: false, error: 'PLACA_DUPLICADA' };
+        toast.error('Ya existe una transportadora con este nombre');
+        return { success: false, error: 'NOMBRE_DUPLICADO' };
       } else if (error.response?.status === 401) {
         toast.error('Debes iniciar sesión para crear una transportadora');
         return { success: false, error: 'UNAUTHORIZED' };
@@ -97,72 +79,45 @@ export default function TransportCompaniesPage() {
     }
   };
 
-  // Editar transportadora
   const handleEditClick = (company: TransportCompany) => {
     if (!isAdmin) {
       toast.error('Solo los administradores pueden editar transportadoras');
       return;
     }
-
     setEditingCompany(company);
     setIsEditing(true);
-    setEditFormData({
-      name: company.name,
-      driverName: company.driverName,
-      licensePlate: company.licensePlate,
-      phone: company.phone || ''
-    });
+    setEditFormData({ name: company.name });
   };
 
   const handleEditCancel = () => {
     setEditingCompany(null);
     setIsEditing(false);
-    setEditFormData({
-      name: '',
-      driverName: '',
-      licensePlate: '',
-      phone: ''
-    });
+    setEditFormData({ name: '' });
   };
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setEditFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!editingCompany) return;
 
-    // Validaciones básicas
-    if (!editFormData.name.trim() || !editFormData.driverName.trim() || !editFormData.licensePlate.trim()) {
-      toast.error('Nombre, conductor y placa son obligatorios');
+    if (!editFormData.name.trim()) {
+      toast.error('El nombre es obligatorio');
       return;
     }
 
     try {
-      const dataToSend = {
-        name: editFormData.name.trim(),
-        driverName: editFormData.driverName.trim(),
-        licensePlate: editFormData.licensePlate.trim().toUpperCase(),
-        phone: editFormData.phone.trim() || null
-      };
-
-      await transportService.update(editingCompany.id, dataToSend);
-      
+      await transportService.update(editingCompany.id, { name: editFormData.name.trim() });
       toast.success('Transportadora actualizada exitosamente');
       handleEditCancel();
       loadCompanies();
-      
     } catch (error: any) {
       console.error('Error actualizando transportadora:', error);
-      
       if (error.response?.status === 409) {
-        toast.error('Ya existe una transportadora con esta placa');
+        toast.error('Ya existe una transportadora con este nombre');
       } else if (error.response?.status === 403) {
         toast.error('No tienes permisos para editar transportadoras');
       } else if (error.response?.status === 404) {
@@ -178,10 +133,7 @@ export default function TransportCompaniesPage() {
       toast.error('Solo los administradores pueden eliminar transportadoras');
       return;
     }
-
-    if (!confirm(`¿Estás seguro de eliminar la transportadora "${name}"?`)) {
-      return;
-    }
+    if (!confirm(`¿Estás seguro de eliminar la transportadora "${name}"?`)) return;
 
     try {
       await transportService.delete(id);
@@ -203,7 +155,6 @@ export default function TransportCompaniesPage() {
       toast.error('Solo los administradores pueden cambiar el estado');
       return;
     }
-
     try {
       await transportService.toggleStatus(id);
       toast.success(`Transportadora ${currentStatus ? 'desactivada' : 'activada'} exitosamente`);
@@ -214,9 +165,7 @@ export default function TransportCompaniesPage() {
   };
 
   const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    company.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    company.licensePlate.toLowerCase().includes(searchTerm.toLowerCase())
+    company.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -245,13 +194,8 @@ export default function TransportCompaniesPage() {
                 </div>
               </div>
             </div>
-            
-            {/* Botón para TODOS los usuarios autenticados */}
             {user && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="transport-create-btn"
-              >
+              <button onClick={() => setIsModalOpen(true)} className="transport-create-btn">
                 <Plus className="transport-create-icon" />
                 Nueva Transportadora
               </button>
@@ -285,16 +229,12 @@ export default function TransportCompaniesPage() {
             <Search className="transport-search-icon" />
             <input
               type="text"
-              placeholder="Buscar por nombre, conductor o placa..."
+              placeholder="Buscar por nombre..."
               className="transport-search-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button
-              onClick={loadCompanies}
-              className="transport-refresh-btn"
-              disabled={loading}
-            >
+            <button onClick={loadCompanies} className="transport-refresh-btn" disabled={loading}>
               <RefreshCw className={`transport-refresh-icon ${loading ? 'spin' : ''}`} />
               Actualizar
             </button>
@@ -312,8 +252,8 @@ export default function TransportCompaniesPage() {
               <p className="transport-empty-message">
                 {searchTerm
                   ? 'Intenta con otros términos de búsqueda'
-                  : user 
-                    ? 'Crea tu primera transportadora para comenzar' 
+                  : user
+                    ? 'Crea tu primera transportadora para comenzar'
                     : 'No hay transportadoras disponibles'}
               </p>
             </div>
@@ -323,13 +263,8 @@ export default function TransportCompaniesPage() {
                 <thead className="transport-table-header">
                   <tr>
                     <th className="transport-table-th">Empresa</th>
-                    <th className="transport-table-th">Conductor</th>
-                    <th className="transport-table-th">Placa</th>
-                    <th className="transport-table-th">Teléfono</th>
                     <th className="transport-table-th">Estado</th>
-                    {isAdmin && (
-                      <th className="transport-table-th">Acciones</th>
-                    )}
+                    {isAdmin && <th className="transport-table-th">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="transport-table-body">
@@ -354,101 +289,35 @@ export default function TransportCompaniesPage() {
                           </div>
                         )}
                       </td>
-                      
-                      <td className="transport-table-td">
-                        {editingCompany?.id === company.id && isEditing ? (
-                          <input
-                            type="text"
-                            name="driverName"
-                            value={editFormData.driverName}
-                            onChange={handleEditChange}
-                            className="transport-edit-input"
-                            placeholder="Nombre del conductor"
-                          />
-                        ) : (
-                          <div className="transport-driver-name">{company.driverName}</div>
-                        )}
-                      </td>
-                      
-                      <td className="transport-table-td">
-                        {editingCompany?.id === company.id && isEditing ? (
-                          <input
-                            type="text"
-                            name="licensePlate"
-                            value={editFormData.licensePlate}
-                            onChange={handleEditChange}
-                            className="transport-edit-input"
-                            placeholder="Placa del vehículo"
-                          />
-                        ) : (
-                          <span className="transport-license-plate">
-                            {company.licensePlate}
-                          </span>
-                        )}
-                      </td>
-                      
-                      <td className="transport-table-td">
-                        {editingCompany?.id === company.id && isEditing ? (
-                          <input
-                            type="text"
-                            name="phone"
-                            value={editFormData.phone}
-                            onChange={handleEditChange}
-                            className="transport-edit-input"
-                            placeholder="Teléfono (opcional)"
-                          />
-                        ) : (
-                          <span className="transport-phone">
-                            {company.phone || 'N/A'}
-                          </span>
-                        )}
-                      </td>
-                      
+
                       <td className="transport-table-td">
                         <button
                           onClick={() => handleToggleStatus(company.id, company.isActive)}
                           className={`transport-status-btn ${company.isActive ? 'transport-status-active' : 'transport-status-inactive'} ${isAdmin ? 'transport-status-btn-admin' : 'transport-status-btn-user'}`}
                           disabled={!isAdmin}
-                          title={isAdmin ? "Click para cambiar estado" : "Solo administradores pueden cambiar estado"}
+                          title={isAdmin ? 'Click para cambiar estado' : 'Solo administradores pueden cambiar estado'}
                         >
                           {company.isActive ? 'Activa' : 'Inactiva'}
                         </button>
                       </td>
-                      
-                      {/* Acciones solo para admin */}
+
                       {isAdmin && (
                         <td className="transport-table-td">
                           {editingCompany?.id === company.id ? (
                             <div className="transport-edit-actions">
-                              <button
-                                onClick={handleEditSubmit}
-                                className="transport-action-btn transport-action-save"
-                                title="Guardar cambios"
-                              >
+                              <button onClick={handleEditSubmit} className="transport-action-btn transport-action-save" title="Guardar cambios">
                                 <Save className="transport-action-icon" />
                               </button>
-                              <button
-                                onClick={handleEditCancel}
-                                className="transport-action-btn transport-action-cancel"
-                                title="Cancelar edición"
-                              >
+                              <button onClick={handleEditCancel} className="transport-action-btn transport-action-cancel" title="Cancelar edición">
                                 <X className="transport-action-icon" />
                               </button>
                             </div>
                           ) : (
                             <div className="transport-actions">
-                              <button 
-                                onClick={() => handleEditClick(company)}
-                                className="transport-action-btn transport-action-edit"
-                                title="Editar"
-                              >
+                              <button onClick={() => handleEditClick(company)} className="transport-action-btn transport-action-edit" title="Editar">
                                 <Edit className="transport-action-icon" />
                               </button>
-                              <button
-                                onClick={() => handleDelete(company.id, company.name)}
-                                className="transport-action-btn transport-action-delete"
-                                title="Eliminar"
-                              >
+                              <button onClick={() => handleDelete(company.id, company.name)} className="transport-action-btn transport-action-delete" title="Eliminar">
                                 <Trash2 className="transport-action-icon" />
                               </button>
                             </div>
@@ -464,7 +333,6 @@ export default function TransportCompaniesPage() {
         </div>
       </div>
 
-      {/* Modal para crear transportadora */}
       {user && (
         <CreateTransportCompanyModal
           isOpen={isModalOpen}
