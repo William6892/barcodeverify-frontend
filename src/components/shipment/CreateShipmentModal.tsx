@@ -28,11 +28,13 @@ import {
   Loader2,
   FileWarning,
   Zap,  
-  Lock
+  Lock,
+  UserPlus,
+  Car
 } from 'lucide-react';
-import { shipmentService, transportService } from '../../services/api';
+import { shipmentService, transportService, driverService, vehicleService } from '../../services/api';
+import type { Driver, Vehicle } from '../../services/api';
 
-// ✅ CORREGIDO: Eliminados driverName, licensePlate, phone
 interface TransportCompany {
   id: number;
   name: string;
@@ -89,6 +91,22 @@ export default function CreateShipmentModal({
   const [step, setStep] = useState(1);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   
+  // Estados para conductores y vehículos
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<number | ''>('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | ''>('');
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  
+  // Estados para modales de creación rápida
+  const [showCreateDriver, setShowCreateDriver] = useState(false);
+  const [showCreateVehicle, setShowCreateVehicle] = useState(false);
+  const [newDriverData, setNewDriverData] = useState({ identificationNumber: '', fullName: '' });
+  const [newVehicleData, setNewVehicleData] = useState({ plateNumber: '', trailerPlate: '', vehicleType: '' });
+  const [creatingDriver, setCreatingDriver] = useState(false);
+  const [creatingVehicle, setCreatingVehicle] = useState(false);
+  
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [bulkBarcodeInput, setBulkBarcodeInput] = useState('');
@@ -138,6 +156,8 @@ export default function CreateShipmentModal({
   const handleCompanyChange = (companyId: number) => {
     setSelectedCompanyId(companyId);
     setValidationErrors(prev => ({ ...prev, transportCompany: undefined }));
+    setSelectedDriverId('');
+    setSelectedVehicleId('');
     if (products.length > 0) {
       setTimeout(() => checkCapacity(), 100);
     }
@@ -246,6 +266,10 @@ export default function CreateShipmentModal({
     setBulkBarcodeInput('');
     setStep(1);
     setSelectedCompanyId(transportCompanies.length > 0 ? transportCompanies[0].id : '');
+    setSelectedDriverId('');
+    setSelectedVehicleId('');
+    setDrivers([]);
+    setVehicles([]);
     resetValidations();
     setConfirmNoProducts(false);
     setConfirmNoDepartureTime(false);
@@ -253,9 +277,10 @@ export default function CreateShipmentModal({
     setShowBulkInput(false);
     setCapacityWarning('');
     generateShipmentNumber();
+    setShowCreateDriver(false);
+    setShowCreateVehicle(false);
   };
 
-  // ✅ CORREGIDO: Usa shipmentService.scanProduct en lugar de productService.create (Admin-only)
   const createProductsInBackend = async (shipmentId: number) => {
     if (products.length === 0) {
       console.log('📝 No hay productos para crear');
@@ -293,7 +318,6 @@ export default function CreateShipmentModal({
         } else if (error.response?.status === 401) {
           alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
         } else if (error.response?.status === 409) {
-          // Producto duplicado — no es error crítico, continuar
           console.warn(`Producto ${product.barcode} ya existe, se actualizó la cantidad`);
           createdProducts.push({ barcode: product.barcode, updated: true });
         } else {
@@ -303,6 +327,100 @@ export default function CreateShipmentModal({
     }
       
     return createdProducts;
+  };
+
+  // Función para cargar conductores y vehículos
+  const loadDriversAndVehicles = async (companyId: number) => {
+    if (!companyId) return;
+    
+    setLoadingDrivers(true);
+    setLoadingVehicles(true);
+    
+    try {
+      const [driversRes, vehiclesRes] = await Promise.all([
+        driverService.getByCompany(companyId),
+        vehicleService.getByCompany(companyId)
+      ]);
+      
+      setDrivers(driversRes);
+      setVehicles(vehiclesRes);
+      
+      if (driversRes.length === 1) setSelectedDriverId(driversRes[0].id);
+      if (vehiclesRes.length === 1) setSelectedVehicleId(vehiclesRes[0].id);
+      
+    } catch (error) {
+      console.error('Error loading drivers/vehicles:', error);
+    } finally {
+      setLoadingDrivers(false);
+      setLoadingVehicles(false);
+    }
+  };
+
+  // Función para crear conductor rápido
+  const handleCreateDriver = async () => {
+    if (!newDriverData.identificationNumber.trim()) {
+      alert('La cédula es requerida');
+      return;
+    }
+    if (!newDriverData.fullName.trim()) {
+      alert('El nombre es requerido');
+      return;
+    }
+    if (!selectedCompanyId) {
+      alert('Primero selecciona una transportadora');
+      return;
+    }
+
+    setCreatingDriver(true);
+    try {
+      await driverService.create({
+        identificationNumber: newDriverData.identificationNumber,
+        fullName: newDriverData.fullName,
+        transportCompanyId: selectedCompanyId
+      });
+      
+      alert('✅ Conductor creado exitosamente');
+      setNewDriverData({ identificationNumber: '', fullName: '' });
+      setShowCreateDriver(false);
+      await loadDriversAndVehicles(selectedCompanyId);
+      
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al crear conductor');
+    } finally {
+      setCreatingDriver(false);
+    }
+  };
+
+  // Función para crear vehículo rápido
+  const handleCreateVehicle = async () => {
+    if (!newVehicleData.plateNumber.trim()) {
+      alert('La placa es requerida');
+      return;
+    }
+    if (!selectedCompanyId) {
+      alert('Primero selecciona una transportadora');
+      return;
+    }
+
+    setCreatingVehicle(true);
+    try {
+      await vehicleService.create({
+        plateNumber: newVehicleData.plateNumber,
+        trailerPlate: newVehicleData.trailerPlate || undefined,
+        vehicleType: newVehicleData.vehicleType || undefined,
+        transportCompanyId: selectedCompanyId
+      });
+      
+      alert('✅ Vehículo creado exitosamente');
+      setNewVehicleData({ plateNumber: '', trailerPlate: '', vehicleType: '' });
+      setShowCreateVehicle(false);
+      await loadDriversAndVehicles(selectedCompanyId);
+      
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al crear vehículo');
+    } finally {
+      setCreatingVehicle(false);
+    }
   };
 
   // ====================================
@@ -334,6 +452,17 @@ export default function CreateShipmentModal({
       checkCapacity();
     }
   }, [selectedCompanyId, products]);
+
+  useEffect(() => {
+    if (selectedCompanyId) {
+      loadDriversAndVehicles(selectedCompanyId);
+    } else {
+      setDrivers([]);
+      setVehicles([]);
+      setSelectedDriverId('');
+      setSelectedVehicleId('');
+    }
+  }, [selectedCompanyId]);
 
   // ====================================
   // FUNCIONES AUXILIARES
@@ -592,7 +721,6 @@ export default function CreateShipmentModal({
     return undefined;
   };
 
-  // ✅ CORREGIDO: Validación de código de barras sin restricción de caracteres especiales
   const validateBarcode = (barcode: string): string | undefined => {
     if (!barcode || barcode.trim() === '') {
       return 'Ingresa un código de barras';
@@ -606,7 +734,6 @@ export default function CreateShipmentModal({
       return `El código no puede exceder los ${VALIDATION_CONFIG.MAX_BARCODE_LENGTH} caracteres`;
     }
     
-    // ✅ Solo validamos que no tenga caracteres de control
     if (/[\x00-\x1F\x7F]/.test(barcode)) {
       return 'El código contiene caracteres de control no permitidos';
     }
@@ -635,7 +762,6 @@ export default function CreateShipmentModal({
     const invalidBarcodes: string[] = [];
     
     barcodes.forEach(barcode => {
-      // ✅ Validar usando la nueva función
       const validationError = validateBarcode(barcode);
       if (validationError) {
         invalidBarcodes.push(`${barcode} (${validationError})`);
@@ -682,11 +808,9 @@ export default function CreateShipmentModal({
     }
   };
 
-  // ✅ CORREGIDO: handleAddProduct usa la nueva validación sin restricciones de caracteres especiales
   const handleAddProduct = async () => {
     const barcode = barcodeInput.trim();
     
-    // Validar usando la nueva función
     const validationError = validateBarcode(barcode);
     if (validationError) {
       setValidationErrors(prev => ({ ...prev, barcode: validationError }));
@@ -864,7 +988,6 @@ export default function CreateShipmentModal({
     alert(`Hora de salida establecida: ${new Date(slotStart).toLocaleString('es-ES')}`);
   };
 
-  // ✅ CORREGIDO: handleSubmit envía solo los campos que el backend acepta
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -882,6 +1005,8 @@ export default function CreateShipmentModal({
 📦 RESUMEN DEL ENVÍO
 ────────────────────
 Transportadora: ${selectedCompany?.name}
+Conductor: ${drivers.find(d => d.id === selectedDriverId)?.fullName || 'No asignado'}
+Vehículo: ${vehicles.find(v => v.id === selectedVehicleId)?.plateNumber || 'No asignado'}
 Número de envío: ${shipmentNumber}
 Hora de salida: ${estimatedDeparture ? new Date(estimatedDeparture).toLocaleString('es-ES') : 'No especificada'}
 Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0)} unidades)
@@ -900,9 +1025,10 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
     setLoading(true);
 
     try {
-      // 1️⃣ Crear el envío — ✅ SOLO campos que el backend acepta
       const shipmentData: any = {
         transportCompanyId: selectedCompanyId,
+        driverId: selectedDriverId || undefined,
+        vehicleId: selectedVehicleId || undefined,
         shipmentNumber: shipmentNumber.trim(),
       };
 
@@ -920,16 +1046,12 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
         throw new Error('No se pudo obtener el ID del envío creado');
       }
 
-      // 2️⃣ Agregar productos usando scanProduct (no requiere Admin)
       let createdProducts = [];
       if (products.length > 0) {
-        // El envío debe estar en estado InProgress para escanear
-        // Primero lo iniciamos
         try {
           await shipmentService.start(shipmentNumber.trim());
         } catch (startError: any) {
           console.warn('No se pudo iniciar el envío automáticamente:', startError.message);
-          // Continuar de todas formas — el usuario puede iniciarlo manualmente
         }
         
         createdProducts = await createProductsInBackend(shipmentId);
@@ -951,6 +1073,8 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
         hasDepartureTime: !!estimatedDeparture,
         shipmentNumber: shipmentNumber,
         transportCompany: selectedCompany,
+        driver: drivers.find(d => d.id === selectedDriverId),
+        vehicle: vehicles.find(v => v.id === selectedVehicleId),
       };
       
       onSuccess(fullShipmentData);
@@ -976,10 +1100,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
       setIsSubmitting(false);
     }
   };
-
-  // ====================================
-  // DERIVADOS
-  // ====================================
 
   const selectedCompany = transportCompanies.find(c => c.id === selectedCompanyId);
   const totalProductsCount = products.reduce((sum, product) => sum + product.quantity, 0);
@@ -1161,7 +1281,6 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                                 </span>
                               )}
                             </div>
-                            {/* ✅ CORREGIDO: Eliminadas filas de driverName, licensePlate, phone */}
                             {company.maxCapacity && (
                               <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
                                 <Package className="w-3 h-3" />
@@ -1181,7 +1300,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                 )}
               </div>
 
-              {/* Info de transportadora sin campos eliminados */}
+              {/* Info de transportadora */}
               {selectedCompany && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
                   <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
@@ -1227,6 +1346,8 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                 </div>
               )}
 
+
+
               <div className="flex justify-end pt-4">
                 <button
                   type="button"
@@ -1250,7 +1371,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
             </div>
           )}
 
-          {/* PASO 2: Detalles del envío */}
+          {/* PASO 2: Detalles del envío - IGUAL */}
           {step === 2 && (
             <div className="space-y-6">
               {/* Número de envío */}
@@ -1443,6 +1564,109 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                 )}
               </div>
 
+              {/* ✅ Tarjetas de Conductor y Vehículo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Conductor Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <UserPlus className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Conductor</h4>
+                        <p className="text-xs text-gray-500">Asignar al envío</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateDriver(true)}
+                      className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    >
+                      + Nuevo
+                    </button>
+                  </div>
+                  
+                  {loadingDrivers ? (
+                    <div className="flex items-center justify-center py-3 text-sm text-gray-500 gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
+                    </div>
+                  ) : drivers.length === 0 ? (
+                    <div className="text-yellow-700 text-sm bg-yellow-50 p-3 rounded-xl border border-yellow-100 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" /> No hay conductores
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        value={selectedDriverId}
+                        onChange={(e) => setSelectedDriverId(Number(e.target.value))}
+                        className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
+                      >
+                        <option value="">Seleccionar conductor...</option>
+                        {drivers.map(driver => (
+                          <option key={driver.id} value={driver.id}>
+                            {driver.fullName} - {driver.identificationNumber}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Vehículo Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Car className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Vehículo</h4>
+                        <p className="text-xs text-gray-500">Asignar al envío</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateVehicle(true)}
+                      className="text-xs bg-purple-50 text-purple-600 hover:bg-purple-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    >
+                      + Nuevo
+                    </button>
+                  </div>
+                  
+                  {loadingVehicles ? (
+                    <div className="flex items-center justify-center py-3 text-sm text-gray-500 gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
+                    </div>
+                  ) : vehicles.length === 0 ? (
+                    <div className="text-yellow-700 text-sm bg-yellow-50 p-3 rounded-xl border border-yellow-100 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" /> No hay vehículos
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        value={selectedVehicleId}
+                        onChange={(e) => setSelectedVehicleId(Number(e.target.value))}
+                        className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent font-medium"
+                      >
+                        <option value="">Seleccionar vehículo...</option>
+                        {vehicles.map(vehicle => (
+                          <option key={vehicle.id} value={vehicle.id}>
+                            {vehicle.displayText || vehicle.plateNumber}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Resumen paso 2 */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
                 <h3 className="font-semibold text-green-800 mb-4 flex items-center gap-2">
@@ -1508,6 +1732,7 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
           {/* PASO 3: Productos */}
           {step === 3 && (
             <div className="space-y-6">
+              {/* Contenido de productos - IGUAL QUE ANTES */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -1584,12 +1809,11 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                   </div>
                 )}
 
-                {/* ✅ CORREGIDO: Input individual sin restricción de caracteres especiales */}
+                {/* Input individual */}
                 <div className="mb-6">
                   <div className="flex gap-2 mb-3">
                     <div className="relative flex-1">
-                      <input
-                        ref={barcodeInputRef}
+                      <input                        ref={barcodeInputRef}
                         type="text"
                         value={barcodeInput}
                         onChange={(e) => {
@@ -1827,6 +2051,18 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                     <p className="font-bold text-gray-900">{selectedCompany?.name || 'No seleccionada'}</p>
                   </div>
                   <div>
+                    <p className="text-sm text-gray-600 font-medium">Conductor</p>
+                    <p className="font-bold text-gray-900">
+                      {drivers.find(d => d.id === selectedDriverId)?.fullName || 'No asignado'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Vehículo</p>
+                    <p className="font-bold text-gray-900">
+                      {vehicles.find(v => v.id === selectedVehicleId)?.plateNumber || 'No asignado'}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-sm text-gray-600 font-medium">Número de envío</p>
                     <p className="font-mono font-bold text-gray-900">{shipmentNumber}</p>
                   </div>
@@ -1949,6 +2185,110 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
           </div>
         </div>
       </div>
+
+      {/* MODAL PARA CREAR CONDUCTOR */}
+      {showCreateDriver && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Nuevo Conductor</h3>
+              <button onClick={() => setShowCreateDriver(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Para: {selectedCompany?.name}</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
+                <input
+                  type="text"
+                  value={newDriverData.identificationNumber}
+                  onChange={(e) => setNewDriverData({ ...newDriverData, identificationNumber: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Ej: 12345678"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  value={newDriverData.fullName}
+                  onChange={(e) => setNewDriverData({ ...newDriverData, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Ej: Juan Carlos Pérez"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button onClick={() => setShowCreateDriver(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  Cancelar
+                </button>
+                <button onClick={handleCreateDriver} disabled={creatingDriver} className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50">
+                  {creatingDriver ? 'Creando...' : 'Crear Conductor'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA CREAR VEHÍCULO */}
+      {showCreateVehicle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Nuevo Vehículo</h3>
+              <button onClick={() => setShowCreateVehicle(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Para: {selectedCompany?.name}</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Placa *</label>
+                <input
+                  type="text"
+                  value={newVehicleData.plateNumber}
+                  onChange={(e) => setNewVehicleData({ ...newVehicleData, plateNumber: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Ej: ABC123"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Placa Trailer (opcional)</label>
+                <input
+                  type="text"
+                  value={newVehicleData.trailerPlate}
+                  onChange={(e) => setNewVehicleData({ ...newVehicleData, trailerPlate: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Ej: TRAILER789"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Vehículo</label>
+                <select
+                  value={newVehicleData.vehicleType}
+                  onChange={(e) => setNewVehicleData({ ...newVehicleData, vehicleType: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Seleccionar tipo...</option>
+                  <option value="Furgón">Furgón</option>
+                  <option value="Mula">Mula</option>
+                  <option value="C Camión">Camión</option>
+                  <option value="Trailer">Trailer</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button onClick={() => setShowCreateVehicle(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  Cancelar
+                </button>
+                <button onClick={handleCreateVehicle} disabled={creatingVehicle} className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50">
+                  {creatingVehicle ? 'Creando...' : 'Crear Vehículo'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

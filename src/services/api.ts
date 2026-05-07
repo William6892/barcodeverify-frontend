@@ -1,7 +1,7 @@
 // src/services/api.ts
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://barcodeverify-backend.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5034/api';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -67,7 +67,6 @@ export interface UpdateUserStatusDto {
   isActive: boolean;
 }
 
-// ✅ CORREGIDO: Eliminados driverName, licensePlate, phone
 export interface TransportCompany {
   id: number;
   name: string;
@@ -77,7 +76,28 @@ export interface TransportCompany {
   totalProducts?: number;
 }
 
-// ✅ CORREGIDO: transportCompany solo tiene name
+export interface Driver {
+  id: number;
+  identificationNumber: string;
+  fullName: string;
+  transportCompanyId: number;
+  transportCompanyName?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface Vehicle {
+  id: number;
+  plateNumber: string;
+  trailerPlate?: string;
+  vehicleType?: string;
+  transportCompanyId: number;
+  transportCompanyName?: string;
+  isActive: boolean;
+  createdAt: string;
+  displayText: string;
+}
+
 export interface Shipment {
   id: number;
   shipmentNumber: string;
@@ -86,6 +106,10 @@ export interface Shipment {
   transportCompany?: {
     name: string;
   };
+  driverId?: number;
+  driver?: Driver;
+  vehicleId?: number;
+  vehicle?: Vehicle;
   productCount: number;
   createdAt: string;
   estimatedDeparture?: string;
@@ -114,7 +138,7 @@ export const authService = {
   login: async (credentials: { username: string; password: string }) => {
     try {
       console.log('📤 Enviando login:', { username: credentials.username });
-      const response = await api.post('/api/auth/login', {
+      const response = await api.post('/auth/login', {
         username: credentials.username,
         password: credentials.password
       });
@@ -133,7 +157,7 @@ export const authService = {
     role?: 'User' | 'Admin' | 'Scanner';
   }) => {
     try {
-      const response = await api.post('/api/auth/register', {
+      const response = await api.post('/auth/register', {
         username: data.username,
         email: data.email,
         password: data.password,
@@ -153,7 +177,7 @@ export const authService = {
   
   verifyToken: async () => {
     try {
-      const response = await api.get('/api/auth/verify');
+      const response = await api.get('/auth/verify');
       return response.data;
     } catch {
       return null;
@@ -171,92 +195,85 @@ export const authService = {
 // ============================
 
 export const shipmentService = {
-  // Crear nuevo envío
-  create: async (data: any) => {
-    const response = await api.post('/api/Shipment/create', data);
+  create: async (data: { 
+    transportCompanyId: number;
+    driverId?: number;
+    vehicleId?: number;
+    shipmentNumber: string;
+    estimatedDeparture?: string;
+    notes?: string;
+  }) => {
+    const response = await api.post('/Shipment/create', data);
     return response.data;
   },
   
-  // Iniciar escaneo
   start: async (shipmentNumber: string) => {
-    const response = await api.post('/api/Shipment/start', { shipmentNumber });
+    const response = await api.post('/Shipment/start', { shipmentNumber });
     return response.data;
   },
   
-  // Escanear producto
   scanProduct: async (data: any) => {
-    const response = await api.post('/api/Shipment/scan', data);
+    const response = await api.post('/Shipment/scan', data);
     return response.data;
   },
   
-  // Completar envío
   complete: async (shipmentId: number) => {
-    const response = await api.post(`/api/Shipment/complete/${shipmentId}`);
+    const response = await api.post(`/Shipment/complete/${shipmentId}`);
     return response.data;
   },
   
-  // Obtener envíos activos
   getActive: async () => {
-    const response = await api.get('/api/Shipment/active');
+    const response = await api.get('/Shipment/active');
     return response.data;
   },
   
-  // Obtener TODOS los envíos
   getAll: async () => {
-    const response = await api.get('/api/Shipment/all');
+    const response = await api.get('/Shipment/all');
     return response.data;
   },
   
-  // Obtener envíos completados
   getCompleted: async () => {
-    const response = await api.get('/api/Shipment/completed');
+    const response = await api.get('/Shipment/completed');
     return response.data;
   },
   
-  // Obtener envíos cancelados
   getCancelled: async () => {
-    const response = await api.get('/api/Shipment/cancelled');
+    const response = await api.get('/Shipment/cancelled');
     return response.data;
   },
   
-  // Obtener por ID
   getById: async (id: number) => {
-    const response = await api.get(`/api/Shipment/${id}`);
+    const response = await api.get(`/Shipment/${id}`);
     return response.data;
   },
   
-  // Obtener por número
   getByNumber: async (shipmentNumber: string) => {
-    const response = await api.get(`/api/Shipment/number/${shipmentNumber}`);
+    const response = await api.get(`/Shipment/number/${shipmentNumber}`);
     return response.data;
   },
   
-  // Buscar envíos
   search: async (params: {
     status?: string;
     dateFrom?: string;
     dateTo?: string;
     shipmentNumber?: string;
   }) => {
-    const response = await api.get('/api/Shipment/search', { params });
+    const response = await api.get('/Shipment/search', { params });
     return response.data;
   },
   
-  // Actualizar estado
   updateStatus: async (id: number, status: string) => {
-    const response = await api.patch(`/api/Shipment/${id}/status`, { status });
+    const response = await api.patch(`/Shipment/${id}/status`, { status });
     return response.data;
   },
   
-  // Cancelar envío (solo admin)
   cancel: async (id: number) => {
-    const response = await api.patch(`/api/Shipment/${id}/cancel`);
+    const response = await api.patch(`/Shipment/${id}/cancel`);
     return response.data;
   },
   
-  // Obtener estadísticas
   getStats: async () => {
-    const response = await api.get('/api/Shipment/stats');
+    const response = await api.get('/Shipment/stats');
     return response.data;
   },
 };
@@ -266,7 +283,6 @@ export const shipmentService = {
 // ============================
 
 export const productService = {
-  // Escanear producto en un envío (ShipmentController)
   scanProduct: async (data: { 
     shipmentId: number; 
     barcode: string; 
@@ -278,11 +294,10 @@ export const productService = {
     model?: string;
     serialNumber?: string;
   }) => {
-    const response = await api.post('/api/Shipment/scan', data);
+    const response = await api.post('/Shipment/scan', data);
     return response.data;
   },
   
-  // Crear producto para envío
   createForShipment: async (data: {
     barcode: string;
     name: string;
@@ -292,7 +307,7 @@ export const productService = {
   }) => {
     console.log('📤 [productService] Enviando:', data);
     try {
-      const response = await api.post('/api/Product/create-for-shipment', data);
+      const response = await api.post('/Product/create-for-shipment', data);
       console.log('✅ [productService] Respuesta recibida');
       return response.data;
     } catch (error: any) {
@@ -301,63 +316,53 @@ export const productService = {
     }
   },
   
-  // Obtener productos por envío
   getByShipment: async (shipmentId: number) => {
-    const response = await api.get(`/api/Product/shipment/${shipmentId}`);
+    const response = await api.get(`/Product/shipment/${shipmentId}`);
     return response.data;
   },
   
-  // Obtener todos los productos
   getAll: async (params?: any) => {
-    const response = await api.get('/api/Product', { params });
+    const response = await api.get('/Product', { params });
     return response.data;
   },
   
-  // Buscar productos
   search: async (params: any) => {
-    const response = await api.get('/api/Product/search', { params });
+    const response = await api.get('/Product/search', { params });
     return response.data;
   },
   
-  // Obtener por código de barras
   getByBarcode: async (barcode: string) => {
-    const response = await api.get(`/api/Product/barcode/${barcode}`);
+    const response = await api.get(`/Product/barcode/${barcode}`);
     return response.data;
   },
   
-  // Crear producto (requiere Admin)
   create: async (data: any) => {
-    const response = await api.post('/api/Product', data);
+    const response = await api.post('/Product', data);
     return response.data;
   },
   
-  // Obtener producto por ID
   getById: async (id: number) => {
-    const response = await api.get(`/api/Product/${id}`);
+    const response = await api.get(`/Product/${id}`);
     return response.data;
   },
   
-  // Actualizar producto
   update: async (id: number, data: any) => {
-    const response = await api.put(`/api/Product/${id}`, data);
+    const response = await api.put(`/Product/${id}`, data);
     return response.data;
   },
   
-  // Eliminar producto
   delete: async (id: number) => {
-    const response = await api.delete(`/api/Product/${id}`);
+    const response = await api.delete(`/Product/${id}`);
     return response.data;
   },
   
-  // Obtener estadísticas
   getStats: async () => {
-    const response = await api.get('/api/Product/stats');
+    const response = await api.get('/Product/stats');
     return response.data;
   },
   
-  // Obtener categorías de un envío
   getShipmentCategoryCounts: async (shipmentId: number) => {
-    const response = await api.get(`/api/Product/shipment/${shipmentId}/categories`);
+    const response = await api.get(`/Product/shipment/${shipmentId}/categories`);
     return response.data;
   },
 };
@@ -368,53 +373,157 @@ export const productService = {
 
 export const transportService = {
   getAll: async (activeOnly: boolean = true) => {
-    const response = await api.get('/api/TransportCompany', { 
+    const response = await api.get('/TransportCompany', { 
       params: { activeOnly } 
     });
     return response.data;
   },
   
   getById: async (id: number) => {
-    const response = await api.get(`/api/TransportCompany/${id}`);
+    const response = await api.get(`/TransportCompany/${id}`);
     return response.data;
   },
   
-  // ✅ CORREGIDO: searchByPlate eliminado, ahora searchByName
   searchByName: async (name: string) => {
-    const response = await api.get(`/api/TransportCompany/search`, { 
+    const response = await api.get('/TransportCompany/search', { 
       params: { name } 
     });
     return response.data;
   },
   
   createForUser: async (data: { name: string }) => {
-    const response = await api.post('/api/TransportCompany/user', data);
+    const response = await api.post('/TransportCompany/user', data);
     return response.data;
   },
   
   createForAdmin: async (data: { name: string }) => {
-    const response = await api.post('/api/TransportCompany', data);
+    const response = await api.post('/TransportCompany', data);
     return response.data;
   },
   
   update: async (id: number, data: { name?: string; isActive?: boolean }) => {
-    const response = await api.put(`/api/TransportCompany/${id}`, data);
+    const response = await api.put(`/TransportCompany/${id}`, data);
     return response.data;
   },
   
   delete: async (id: number) => {
-    const response = await api.delete(`/api/TransportCompany/${id}`);
+    const response = await api.delete(`/TransportCompany/${id}`);
     return response.data;
   },
   
   toggleStatus: async (id: number) => {
-    const response = await api.patch(`/api/TransportCompany/${id}/toggle-status`);
+    const response = await api.patch(`/TransportCompany/${id}/toggle-status`);
     return response.data;
   },
   
-  // Alias para crear
   create: async (data: { name: string }) => {
     return await transportService.createForUser(data);
+  },
+};
+
+// ============================
+// SERVICIOS DE CONDUCTORES
+// ============================
+
+export const driverService = {
+  getByCompany: async (companyId: number): Promise<Driver[]> => {
+    const response = await api.get(`/Driver/company/${companyId}`);
+    return response.data;
+  },
+  
+  getAll: async (): Promise<Driver[]> => {
+    const response = await api.get('/Driver');
+    return response.data;
+  },
+  
+  getById: async (id: number): Promise<Driver> => {
+    const response = await api.get(`/Driver/${id}`);
+    return response.data;
+  },
+  
+  create: async (data: { 
+    identificationNumber: string; 
+    fullName: string; 
+    transportCompanyId: number 
+  }): Promise<Driver> => {
+    const response = await api.post('/Driver', data);
+    return response.data;
+  },
+  
+  update: async (id: number, data: { 
+    identificationNumber?: string; 
+    fullName?: string; 
+    transportCompanyId?: number;
+    isActive?: boolean;
+  }): Promise<Driver> => {
+    const response = await api.put(`/Driver/${id}`, data);
+    return response.data;
+  },
+  
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/Driver/${id}`);
+  },
+};
+
+// ============================
+// SERVICIOS DE VEHÍCULOS
+// ============================
+
+export const vehicleService = {
+  getByCompany: async (companyId: number): Promise<Vehicle[]> => {
+    const response = await api.get(`/Vehicle/company/${companyId}`);
+    return response.data.map((vehicle: Vehicle) => ({
+      ...vehicle,
+      displayText: vehicle.trailerPlate && vehicle.vehicleType === 'Mula'
+        ? `${vehicle.plateNumber} + ${vehicle.trailerPlate}`
+        : vehicle.plateNumber
+    }));
+  },
+  
+  getAll: async (): Promise<Vehicle[]> => {
+    const response = await api.get('/Vehicle');
+    return response.data.map((vehicle: Vehicle) => ({
+      ...vehicle,
+      displayText: vehicle.trailerPlate && vehicle.vehicleType === 'Mula'
+        ? `${vehicle.plateNumber} + ${vehicle.trailerPlate}`
+        : vehicle.plateNumber
+    }));
+  },
+  
+  getById: async (id: number): Promise<Vehicle> => {
+    const response = await api.get(`/Vehicle/${id}`);
+    const vehicle = response.data;
+    return {
+      ...vehicle,
+      displayText: vehicle.trailerPlate && vehicle.vehicleType === 'Mula'
+        ? `${vehicle.plateNumber} + ${vehicle.trailerPlate}`
+        : vehicle.plateNumber
+    };
+  },
+  
+  create: async (data: { 
+    plateNumber: string; 
+    trailerPlate?: string; 
+    vehicleType?: string; 
+    transportCompanyId: number 
+  }): Promise<Vehicle> => {
+    const response = await api.post('/Vehicle', data);
+    return response.data;
+  },
+  
+  update: async (id: number, data: { 
+    plateNumber?: string; 
+    trailerPlate?: string; 
+    vehicleType?: string; 
+    transportCompanyId?: number;
+    isActive?: boolean;
+  }): Promise<Vehicle> => {
+    const response = await api.put(`/Vehicle/${id}`, data);
+    return response.data;
+  },
+  
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/Vehicle/${id}`);
   },
 };
 
@@ -423,54 +532,50 @@ export const transportService = {
 // ============================
 
 export const adminService = {
-  // Dashboard
   getDashboardStats: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
     if (endDate) params.endDate = endDate.toISOString();
     
-    const response = await api.get('/api/admin/dashboard/stats', { params });
+    const response = await api.get('/admin/dashboard/stats', { params });
     return response.data;
   },
   
   getQuickStats: async () => {
-    const response = await api.get('/api/admin/stats/quick');
+    const response = await api.get('/admin/stats/quick');
     return response.data;
   },
   
-  // Usuarios
   getUsers: async () => {
-    const response = await api.get('/api/admin/users');
+    const response = await api.get('/admin/users');
     return response.data;
   },
   
   createUser: async (data: CreateUserDto) => {
-    const response = await api.post('/api/admin/users', data);
+    const response = await api.post('/admin/users', data);
     return response.data;
   },
   
   updateUserRole: async (id: number, role: string) => {
-    const response = await api.put(`/api/admin/users/${id}/role`, { role });
+    const response = await api.put(`/admin/users/${id}/role`, { role });
     return response.data;
   },
   
   updateUserStatus: async (id: number, isActive: boolean) => {
-    const response = await api.put(`/api/admin/users/${id}/status`, { isActive });
+    const response = await api.put(`/admin/users/${id}/status`, { isActive });
     return response.data;
   },
   
-  // Transportadoras — ✅ CORREGIDO: solo campo name
   getTransportCompanies: async () => {
-    const response = await api.get('/api/Admin/transport-companies');
+    const response = await api.get('/admin/transport-companies');
     return response.data;
   },
   
   createTransportCompany: async (data: { name: string }) => {
-    const response = await api.post('/api/Admin/transport-companies', data);
+    const response = await api.post('/admin/transport-companies', data);
     return response.data;
   },
   
-  // Productos
   searchProducts: async (params: {
     barcode?: string;
     name?: string;
@@ -480,17 +585,16 @@ export const adminService = {
     page?: number;
     pageSize?: number;
   }) => {
-    const response = await api.get('/api/Admin/products/search', { params });
+    const response = await api.get('/admin/products/search', { params });
     return response.data;
   },
   
-  // Reportes
   generateShipmentReport: async (startDate?: Date, endDate?: Date) => {
     const params: any = {};
     if (startDate) params.startDate = startDate.toISOString();
     if (endDate) params.endDate = endDate.toISOString();
     
-    const response = await api.get('/api/Admin/reports/shipments', { params });
+    const response = await api.get('/admin/reports/shipments', { params });
     return response.data;
   },
 };
@@ -508,17 +612,17 @@ export const userManagementService = {
     password: string;
     role: 'User' | 'Admin' | 'Scanner';
   }) => {
-    const response = await api.post('/api/Admin/users', userData);
+    const response = await api.post('/admin/users', userData);
     return response.data;
   },
   
   updateUserRole: async (userId: number, role: 'User' | 'Admin' | 'Scanner') => {
-    const response = await api.put(`/api/Admin/users/${userId}/role`, { role });
+    const response = await api.put(`/admin/users/${userId}/role`, { role });
     return response.data;
   },
   
   updateUserStatus: async (userId: number, isActive: boolean) => {
-    const response = await api.put(`/api/Admin/users/${userId}/status`, { isActive });
+    const response = await api.put(`/admin/users/${userId}/status`, { isActive });
     return response.data;
   },
   
@@ -618,6 +722,8 @@ export default {
   shipmentService,
   productService,
   transportService,
+  driverService,
+  vehicleService,
   adminService,
   userManagementService,
   handleApiError,
