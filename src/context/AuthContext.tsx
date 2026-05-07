@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       token,
       login,
       logout,
-      isAuthenticated,CreateShipmentModalshipmentService
+      isAuthenticated,
       isAdmin,
     }}>
       {children}
