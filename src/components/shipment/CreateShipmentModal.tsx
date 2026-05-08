@@ -1592,8 +1592,16 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                       <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
                     </div>
                   ) : drivers.length === 0 ? (
-                    <div className="text-yellow-700 text-sm bg-yellow-50 p-3 rounded-xl border border-yellow-100 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" /> No hay conductores
+                    <div className="flex flex-col items-center justify-center p-5 bg-gray-50 border border-dashed border-gray-300 rounded-xl">
+                      <p className="text-sm text-gray-500 mb-3 text-center">No hay conductores registrados para esta transportadora</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateDriver(true)}
+                        className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors w-full flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Registrar Nuevo Conductor
+                      </button>
                     </div>
                   ) : (
                     <div className="relative">
@@ -1642,8 +1650,16 @@ Productos: ${products.length} (${products.reduce((sum, p) => sum + p.quantity, 0
                       <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
                     </div>
                   ) : vehicles.length === 0 ? (
-                    <div className="text-yellow-700 text-sm bg-yellow-50 p-3 rounded-xl border border-yellow-100 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" /> No hay vehículos
+                    <div className="flex flex-col items-center justify-center p-5 bg-gray-50 border border-dashed border-gray-300 rounded-xl">
+                      <p className="text-sm text-gray-500 mb-3 text-center">No hay vehículos registrados para esta transportadora</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateVehicle(true)}
+                        className="bg-purple-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors w-full flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <Car className="w-4 h-4" />
+                        Registrar Nuevo Vehículo
+                      </button>
                     </div>
                   ) : (
                     <div className="relative">
