@@ -5,8 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import ActiveShipments from '../components/shipment/ActiveShipments';
 import CreateShipmentModal from '../components/shipment/CreateShipmentModal';
 import { 
-  Truck, Plus, Package, AlertCircle, Zap, Eye, Shield, 
-  Search, Filter, X, Calendar, User, Hash, Clock 
+  Truck, Plus, Package, AlertCircle, Zap, Eye, Shield,  Filter, X, Calendar, User, Hash,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
