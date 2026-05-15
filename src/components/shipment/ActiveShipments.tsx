@@ -1,7 +1,7 @@
+// src/components/shipment/ActiveShipments.tsx
 import { useState, useEffect } from 'react';
 import { Package, Truck, Play, RefreshCw, AlertCircle, CheckCircle, XCircle, Filter, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { shipmentService } from '../../services/api';
-// import { toast } from 'react-hot-toast'; 
 import './ActiveShipments.css';
 
 type ShipmentStatus = 'Pending' | 'InProgress' | 'Completed' | 'Cancelled';
@@ -12,9 +12,13 @@ interface Shipment {
   status: ShipmentStatus;
   transportCompany?: {
     name: string;
-    driverName: string;
-    licensePlate: string;
-    phone?: string;
+  };
+  driver?: {
+    fullName: string;
+    identificationNumber: string;
+  };
+  vehicle?: {
+    plateNumber: string;
   };
   productCount: number;
   createdAt: string;
@@ -23,12 +27,24 @@ interface Shipment {
 
 interface ActiveShipmentsProps {
   onSelectShipment: (shipmentId: number, shipmentNumber: string) => void;
-  // onRefresh?: () => void;
   showAll?: boolean;
   showFilters?: boolean;
+  externalFilters?: {  // ✅ NUEVA PROP
+    shipmentNumber: string;
+    transportCompany: string;
+    driver: string;
+    status: string;
+    dateFrom: string;
+    dateTo: string;
+  };
 }
 
-export default function ActiveShipments({ onSelectShipment, showAll = false, showFilters = true }: ActiveShipmentsProps) {
+export default function ActiveShipments({ 
+  onSelectShipment, 
+  showAll = false, 
+  showFilters = true,
+  externalFilters  // ✅ RECIBIR LOS FILTROS
+}: ActiveShipmentsProps) {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,8 +124,6 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
       setError(errorMessage);
       setShipments([]);
       
-      // Solo mostrar toast si el componente toast está disponible
-      
     } finally {
       setLoading(false);
     }
@@ -122,15 +136,12 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
   const handleStartScanning = async (shipmentId: number, shipmentNumber: string) => {
     try {
       await shipmentService.start(shipmentNumber);
-      // Mostrar mensaje de éxito si toast está disponible
       alert(`Escaneo iniciado para ${shipmentNumber}`);
-
       onSelectShipment(shipmentId, shipmentNumber);
       loadShipments();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error iniciando escaneo';
       alert(errorMsg);
-
     }
   };
 
@@ -141,16 +152,85 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
     
     try {
       const response = await shipmentService.cancel(shipmentId);
-      // Mostrar éxito
       alert(response.message || 'Envío cancelado exitosamente');
-      // }
       await loadShipments();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Error cancelando envío';
       alert(errorMsg);
-
     }
   };
+
+  // ✅ APLICAR FILTROS EXTERNOS
+  const applyExternalFilters = (shipments: Shipment[]) => {
+    if (!externalFilters) return shipments;
+    
+    let filtered = [...shipments];
+    
+    if (externalFilters.shipmentNumber) {
+      filtered = filtered.filter(s => 
+        s.shipmentNumber?.toLowerCase().includes(externalFilters.shipmentNumber.toLowerCase())
+      );
+    }
+    
+    if (externalFilters.transportCompany) {
+      filtered = filtered.filter(s => 
+        s.transportCompany?.name?.toLowerCase().includes(externalFilters.transportCompany.toLowerCase())
+      );
+    }
+    
+    if (externalFilters.driver) {
+      filtered = filtered.filter(s => 
+        s.driver?.fullName?.toLowerCase().includes(externalFilters.driver.toLowerCase())
+      );
+    }
+    
+    if (externalFilters.status) {
+      filtered = filtered.filter(s => s.status === externalFilters.status);
+    }
+    
+    if (externalFilters.dateFrom) {
+      const fromDate = new Date(externalFilters.dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(s => new Date(s.createdAt) >= fromDate);
+    }
+    
+    if (externalFilters.dateTo) {
+      const toDate = new Date(externalFilters.dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(s => new Date(s.createdAt) <= toDate);
+    }
+    
+    return filtered;
+  };
+
+  const filterShipments = () => {
+    // Primero aplicar filtros externos
+    let filtered = applyExternalFilters(shipments);
+    
+    // Luego aplicar filtros internos de estado
+    if (filterStatus === 'active') {
+      filtered = filtered.filter(s => s.status === 'Pending' || s.status === 'InProgress');
+    } else if (filterStatus === 'completed') {
+      filtered = filtered.filter(s => s.status === 'Completed');
+    } else if (filterStatus === 'cancelled') {
+      filtered = filtered.filter(s => s.status === 'Cancelled');
+    }
+    
+    // Filtro por fecha
+    if (dateFilter) {
+      filtered = filtered.filter(s => {
+        const shipDate = new Date(s.createdAt).toISOString().split('T')[0];
+        return shipDate === dateFilter;
+      });
+    }
+    
+    return filtered;
+  };
+
+  const filteredShipments = filterShipments();
+  const activeCount = shipments.filter(s => s.status === 'Pending' || s.status === 'InProgress').length;
+  const completedCount = shipments.filter(s => s.status === 'Completed').length;
+  const cancelledCount = shipments.filter(s => s.status === 'Cancelled').length;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -194,32 +274,6 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
     }
   };
 
-  const filterShipments = () => {
-    let filtered = shipments;
-    
-    if (filterStatus === 'active') {
-      filtered = filtered.filter(s => s.status === 'Pending' || s.status === 'InProgress');
-    } else if (filterStatus === 'completed') {
-      filtered = filtered.filter(s => s.status === 'Completed');
-    } else if (filterStatus === 'cancelled') {
-      filtered = filtered.filter(s => s.status === 'Cancelled');
-    }
-    
-    if (dateFilter) {
-      filtered = filtered.filter(s => {
-        const shipDate = new Date(s.createdAt).toISOString().split('T')[0];
-        return shipDate === dateFilter;
-      });
-    }
-    
-    return filtered;
-  };
-
-  const filteredShipments = filterShipments();
-  const activeCount = shipments.filter(s => s.status === 'Pending' || s.status === 'InProgress').length;
-  const completedCount = shipments.filter(s => s.status === 'Completed').length;
-  const cancelledCount = shipments.filter(s => s.status === 'Cancelled').length;
-
   if (loading) {
     return (
       <div className="shipment-loading">
@@ -235,10 +289,7 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
         <AlertCircle className="error-icon" />
         <h3 className="error-title">Error de conexión</h3>
         <p className="error-message">{error}</p>
-        <button
-          onClick={loadShipments}
-          className="error-retry-button"
-        >
+        <button onClick={loadShipments} className="error-retry-button">
           <RefreshCw className="retry-icon" />
           Reintentar
         </button>
@@ -248,7 +299,6 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
 
   return (
     <div className="shipment-container">
-      {/* Header */}
       <div className="shipment-header">
         <div className="header-title-container">
           <h2 className="shipment-title">
@@ -260,81 +310,53 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
           </p>
         </div>
         <div className="header-actions">
-          <button
-            onClick={loadShipments}
-            className="refresh-button"
-            disabled={loading}
-          >
+          <button onClick={loadShipments} className="refresh-button" disabled={loading}>
             <RefreshCw className={`refresh-icon ${loading ? 'spin' : ''}`} />
             <span className="refresh-text">Actualizar</span>
           </button>
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros internos */}
       {showFilters && showAll && (
         <div className="filters-container">
-          {/* Botón para mostrar/ocultar filtros en móvil */}
           <div className="filters-mobile-toggle">
-            <button
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              className="filters-toggle-button"
-            >
+            <button onClick={() => setIsFiltersOpen(!isFiltersOpen)} className="filters-toggle-button">
               <span className="filters-toggle-text">
                 <Filter className="filters-toggle-icon" />
                 Filtros
               </span>
-              {isFiltersOpen ? (
-                <ChevronUp className="filters-chevron" />
-              ) : (
-                <ChevronDown className="filters-chevron" />
-              )}
+              {isFiltersOpen ? <ChevronUp className="filters-chevron" /> : <ChevronDown className="filters-chevron" />}
             </button>
           </div>
 
-          {/* Contenido de filtros */}
           <div className={`filters-content ${isFiltersOpen ? 'filters-open' : ''}`}>
             <div className="filters-grid">
-              {/* Filtros por estado */}
               <div className="status-filters">
-                <label className="filters-label">
-                  Filtrar por estado
-                </label>
+                <label className="filters-label">Filtrar por estado</label>
                 <div className="filters-buttons">
-                  <button
-                    onClick={() => setFilterStatus('all')}
-                    className={`filter-button ${filterStatus === 'all' ? 'filter-button-active filter-all' : 'filter-button-inactive'}`}
-                  >
+                  <button onClick={() => setFilterStatus('all')} className={`filter-button ${filterStatus === 'all' ? 'filter-button-active filter-all' : 'filter-button-inactive'}`}>
                     <span className="filter-button-content">
                       <Filter className="filter-icon" />
                       <span>Todos</span>
                       <span className="filter-count">({shipments.length})</span>
                     </span>
                   </button>
-                  <button
-                    onClick={() => setFilterStatus('active')}
-                    className={`filter-button ${filterStatus === 'active' ? 'filter-button-active filter-active' : 'filter-button-inactive'}`}
-                  >
+                  <button onClick={() => setFilterStatus('active')} className={`filter-button ${filterStatus === 'active' ? 'filter-button-active filter-active' : 'filter-button-inactive'}`}>
                     <span className="filter-button-content">
                       <Play className="filter-icon" />
                       <span>Activos</span>
                       <span className="filter-count">({activeCount})</span>
                     </span>
                   </button>
-                  <button
-                    onClick={() => setFilterStatus('completed')}
-                    className={`filter-button ${filterStatus === 'completed' ? 'filter-button-active filter-completed' : 'filter-button-inactive'}`}
-                  >
+                  <button onClick={() => setFilterStatus('completed')} className={`filter-button ${filterStatus === 'completed' ? 'filter-button-active filter-completed' : 'filter-button-inactive'}`}>
                     <span className="filter-button-content">
                       <CheckCircle className="filter-icon" />
                       <span>Complet.</span>
                       <span className="filter-count">({completedCount})</span>
                     </span>
                   </button>
-                  <button
-                    onClick={() => setFilterStatus('cancelled')}
-                    className={`filter-button ${filterStatus === 'cancelled' ? 'filter-button-active filter-cancelled' : 'filter-button-inactive'}`}
-                  >
+                  <button onClick={() => setFilterStatus('cancelled')} className={`filter-button ${filterStatus === 'cancelled' ? 'filter-button-active filter-cancelled' : 'filter-button-inactive'}`}>
                     <span className="filter-button-content">
                       <XCircle className="filter-icon" />
                       <span>Cancel.</span>
@@ -344,27 +366,12 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
                 </div>
               </div>
 
-              {/* Filtro por fecha */}
               <div className="date-filter">
-                <label className="filters-label">
-                  Filtrar por fecha
-                </label>
+                <label className="filters-label">Filtrar por fecha</label>
                 <div className="date-input-container">
                   <Calendar className="date-icon" />
-                  <input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="date-input"
-                  />
-                  {dateFilter && (
-                    <button
-                      onClick={() => setDateFilter('')}
-                      className="date-clear-button"
-                    >
-                      ×
-                    </button>
-                  )}
+                  <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="date-input" />
+                  {dateFilter && <button onClick={() => setDateFilter('')} className="date-clear-button">×</button>}
                 </div>
               </div>
             </div>
@@ -372,14 +379,9 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
         </div>
       )}
 
-      {/* Lista de envíos */}
       <div className="shipments-grid">
         {filteredShipments.map((shipment) => (
-          <div 
-            key={shipment.id} 
-            className="shipment-card"
-          >
-            {/* Header de la tarjeta */}
+          <div key={shipment.id} className="shipment-card">
             <div className="card-header">
               <div className="card-header-info">
                 <div className="status-container">
@@ -394,32 +396,18 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
                     {shipment.productCount} producto{shipment.productCount !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <h3 className="shipment-number">
-                  {shipment.shipmentNumber}
-                </h3>
+                <h3 className="shipment-number">{shipment.shipmentNumber}</h3>
               </div>
               
-              {/* Botones de acción */}
               <div className="card-actions">
                 {shipment.status === 'Pending' || shipment.status === 'InProgress' ? (
                   <>
-                    <button
-                      onClick={() => handleStartScanning(shipment.id, shipment.shipmentNumber)}
-                      className="action-button start-button"
-                      title={shipment.status === 'Pending' ? 'Iniciar escaneo' : 'Continuar escaneo'}
-                    >
+                    <button onClick={() => handleStartScanning(shipment.id, shipment.shipmentNumber)} className="action-button start-button" title={shipment.status === 'Pending' ? 'Iniciar escaneo' : 'Continuar escaneo'}>
                       <Play className="action-icon" />
-                      <span className="action-text-full">
-                        {shipment.status === 'Pending' ? 'Iniciar' : 'Continuar'}
-                      </span>
+                      <span className="action-text-full">{shipment.status === 'Pending' ? 'Iniciar' : 'Continuar'}</span>
                       <span className="action-text-short">▶</span>
                     </button>
-                    
-                    <button
-                      onClick={() => handleCancelShipment(shipment.id, shipment.shipmentNumber)}
-                      className="action-button cancel-button"
-                      title="Cancelar envío"
-                    >
+                    <button onClick={() => handleCancelShipment(shipment.id, shipment.shipmentNumber)} className="action-button cancel-button" title="Cancelar envío">
                       <XCircle className="action-icon" />
                       <span className="action-text-full">Cancelar</span>
                       <span className="action-text-short">✕</span>
@@ -441,87 +429,48 @@ export default function ActiveShipments({ onSelectShipment, showAll = false, sho
               </div>
             </div>
 
-            {/* Información de transporte */}
             {shipment.transportCompany && (
               <div className="transport-info">
                 <div className="transport-header">
                   <Truck className="transport-icon" />
-                  <span className="transport-company">
-                    {shipment.transportCompany.name}
-                  </span>
+                  <span className="transport-company">{shipment.transportCompany.name}</span>
                 </div>
-                <div className="transport-details">
-                  <p className="transport-detail">Conductor: {shipment.transportCompany.driverName}</p>
-                  <p className="transport-detail">Placa: {shipment.transportCompany.licensePlate}</p>
-                  {shipment.transportCompany.phone && (
-                    <p className="transport-detail">Tel: {shipment.transportCompany.phone}</p>
-                  )}
-                </div>
+                {shipment.driver && (
+                  <div className="transport-details">
+                    <p className="transport-detail">Conductor: {shipment.driver.fullName}</p>
+                  </div>
+                )}
+                {shipment.vehicle && (
+                  <div className="transport-details">
+                    <p className="transport-detail">Vehículo: {shipment.vehicle.plateNumber}</p>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Fechas */}
             <div className="dates-container">
               <div className="date-row">
                 <span className="date-label">Creado:</span>
-                <span className="date-value">
-                  {formatDate(shipment.createdAt)}
-                </span>
+                <span className="date-value">{formatDate(shipment.createdAt)}</span>
               </div>
               {shipment.estimatedDeparture && (
                 <div className="date-row">
                   <span className="date-label">Salida estimada:</span>
-                  <span className="date-value estimated">
-                    {formatDate(shipment.estimatedDeparture)}
-                  </span>
+                  <span className="date-value estimated">{formatDate(shipment.estimatedDeparture)}</span>
                 </div>
-              )}
-            </div>
-
-            {/* Estado adicional */}
-            <div className="additional-status">
-              {shipment.status === 'Pending' && (
-                <p className="status-message pending-message">
-                  <AlertCircle className="status-message-icon" />
-                  <span>Esperando inicio de escaneo</span>
-                </p>
-              )}
-              {shipment.status === 'InProgress' && shipment.productCount > 0 && (
-                <p className="status-message inprogress-message">
-                  ✅ {shipment.productCount} producto{shipment.productCount !== 1 ? 's' : ''} escaneado{shipment.productCount !== 1 ? 's' : ''}
-                </p>
-              )}
-              {shipment.status === 'Completed' && (
-                <p className="status-message completed-message">
-                  📦 Envío completado
-                </p>
               )}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Estado vacío */}
       {filteredShipments.length === 0 && !error && (
         <div className="empty-state">
           <Package className="empty-icon" />
-          <h3 className="empty-title">
-            {showAll ? 'No hay envíos' : 'No hay envíos activos'}
-          </h3>
+          <h3 className="empty-title">{showAll ? 'No hay envíos' : 'No hay envíos activos'}</h3>
           <p className="empty-message">
-            {showAll
-              ? 'Crea un nuevo envío para comenzar o ajusta los filtros.'
-              : 'Crea un nuevo envío para comenzar a escanear productos.'
-            }
+            {showAll ? 'Crea un nuevo envío para comenzar o ajusta los filtros.' : 'Crea un nuevo envío para comenzar a escanear productos.'}
           </p>
-          {showAll && dateFilter && (
-            <button
-              onClick={() => setDateFilter('')}
-              className="clear-filters-button"
-            >
-              Limpiar filtro de fecha
-            </button>
-          )}
         </div>
       )}
     </div>

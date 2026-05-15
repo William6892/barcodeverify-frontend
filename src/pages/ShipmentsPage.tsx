@@ -4,7 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ActiveShipments from '../components/shipment/ActiveShipments';
 import CreateShipmentModal from '../components/shipment/CreateShipmentModal';
-import { Truck, Plus, Package, AlertCircle, Zap, Eye, Shield } from 'lucide-react';
+import { 
+  Truck, Plus, Package, AlertCircle, Zap, Eye, Shield, 
+  Search, Filter, X, Calendar, User, Hash, Clock 
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function ShipmentsPage() {
@@ -12,8 +15,50 @@ export default function ShipmentsPage() {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // ✅ Estados para filtros
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    shipmentNumber: '',
+    transportCompany: '',
+    driver: '',
+    status: '',
+    dateFrom: '',
+    dateTo: ''
+  });
 
-  // ✅ Optimizado: Manejar éxito de creación
+  // ✅ Opciones de estados
+  const statusOptions = [
+    { value: '', label: 'Todos los estados' },
+    { value: 'Pending', label: 'Pendiente' },
+    { value: 'InProgress', label: 'En Progreso' },
+    { value: 'Completed', label: 'Completado' },
+    { value: 'Cancelled', label: 'Cancelado' }
+  ];
+
+  // ✅ Manejar cambios en filtros
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  // ✅ Limpiar todos los filtros
+  const clearFilters = () => {
+    setFilters({
+      shipmentNumber: '',
+      transportCompany: '',
+      driver: '',
+      status: '',
+      dateFrom: '',
+      dateTo: ''
+    });
+  };
+
+  // ✅ Verificar si hay filtros activos
+  const hasActiveFilters = useMemo(() => {
+    return Object.values(filters).some(v => v !== '');
+  }, [filters]);
+
+  // ✅ Manejar éxito de creación
   const handleCreateSuccess = useCallback((shipmentData?: any) => {
     toast.success(shipmentData?.shipmentNumber 
       ? `Envío ${shipmentData.shipmentNumber} creado exitosamente`
@@ -23,16 +68,11 @@ export default function ShipmentsPage() {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  // ✅ Optimizado: Redirigir al scanner
+  // ✅ Redirigir al scanner
   const handleSelectShipment = useCallback((shipmentId: number, shipmentNumber: string) => {
     navigate(`/scanner?shipment=${shipmentId}`);
     toast.success(`Escaneando: ${shipmentNumber}`);
   }, [navigate]);
-
-  // ✅ Optimizado: Refresh manual (removido ya que no se usa en ActiveShipments)
-  // const handleManualRefresh = useCallback(() => {
-  //   setRefreshKey(prev => prev + 1);
-  // }, []);
 
   // ✅ Usar useMemo para cálculos derivados
   const isAdmin = useMemo(() => {
@@ -56,7 +96,7 @@ export default function ShipmentsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header - Mejor responsividad */}
+        {/* Header */}
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -73,30 +113,202 @@ export default function ShipmentsPage() {
               </div>
             </div>
             
-            {/* Botón de crear envío - Mejor responsividad */}
-            <button
-              onClick={handleOpenModal}
-              className="btn-primary flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base mt-2 sm:mt-0 w-full sm:w-auto hover:scale-[1.02] transition-transform"
-              aria-label="Crear nuevo envío"
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Crear Envío</span>
-            </button>
+            {/* Botones de acción */}
+            <div className="flex gap-2 mt-2 sm:mt-0">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-all ${
+                  showFilters || hasActiveFilters
+                    ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                    : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                }`}
+                aria-label="Mostrar filtros"
+              >
+                <Filter className="w-4 h-4" />
+                <span className="hidden sm:inline">Filtros</span>
+                {hasActiveFilters && (
+                  <span className="ml-1 w-2 h-2 bg-primary-500 rounded-full"></span>
+                )}
+              </button>
+              
+              <button
+                onClick={handleOpenModal}
+                className="btn-primary flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base w-full sm:w-auto hover:scale-[1.02] transition-transform"
+                aria-label="Crear nuevo envío"
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Crear Envío</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Contenido principal - Mejor padding responsivo */}
+        {/* Panel de filtros */}
+        {showFilters && (
+          <div className="mb-6 bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Filtros de búsqueda
+              </h3>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Número de envío */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <Hash className="w-3 h-3" />
+                  Número de envío
+                </label>
+                <input
+                  type="text"
+                  value={filters.shipmentNumber}
+                  onChange={(e) => handleFilterChange('shipmentNumber', e.target.value)}
+                  placeholder="Ej: SH20250115001"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                />
+              </div>
+
+              {/* Transportadora */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <Truck className="w-3 h-3" />
+                  Transportadora
+                </label>
+                <input
+                  type="text"
+                  value={filters.transportCompany}
+                  onChange={(e) => handleFilterChange('transportCompany', e.target.value)}
+                  placeholder="Nombre de transportadora"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                />
+              </div>
+
+              {/* Conductor */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  Conductor
+                </label>
+                <input
+                  type="text"
+                  value={filters.driver}
+                  onChange={(e) => handleFilterChange('driver', e.target.value)}
+                  placeholder="Nombre del conductor"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                />
+              </div>
+
+              {/* Estado */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <Package className="w-3 h-3" />
+                  Estado
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                >
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Fecha desde */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  Fecha desde
+                </label>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                />
+              </div>
+
+              {/* Fecha hasta */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  Fecha hasta
+                </label>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Resumen de filtros activos */}
+            {hasActiveFilters && (
+              <div className="mt-4 pt-3 border-t flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500">Filtros aplicados:</span>
+                {filters.shipmentNumber && (
+                  <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full flex items-center gap-1">
+                    N°: {filters.shipmentNumber}
+                    <button onClick={() => handleFilterChange('shipmentNumber', '')} className="hover:text-primary-900">
+                      <X className="w-2 h-2" />
+                    </button>
+                  </span>
+                )}
+                {filters.transportCompany && (
+                  <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full flex items-center gap-1">
+                    Transportadora: {filters.transportCompany}
+                    <button onClick={() => handleFilterChange('transportCompany', '')} className="hover:text-primary-900">
+                      <X className="w-2 h-2" />
+                    </button>
+                  </span>
+                )}
+                {filters.driver && (
+                  <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full flex items-center gap-1">
+                    Conductor: {filters.driver}
+                    <button onClick={() => handleFilterChange('driver', '')} className="hover:text-primary-900">
+                      <X className="w-2 h-2" />
+                    </button>
+                  </span>
+                )}
+                {filters.status && (
+                  <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full flex items-center gap-1">
+                    Estado: {statusOptions.find(o => o.value === filters.status)?.label}
+                    <button onClick={() => handleFilterChange('status', '')} className="hover:text-primary-900">
+                      <X className="w-2 h-2" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Contenido principal */}
         <div className="bg-white rounded-xl sm:rounded-xl shadow-sm border p-3 sm:p-4 md:p-6 mb-6 md:mb-8">
           <ActiveShipments 
             key={refreshKey}
             onSelectShipment={handleSelectShipment}
-            // onRefresh={handleManualRefresh} // Removido: ActiveShipments no tiene esta prop
             showAll={isAdmin}
             showFilters={true}
+            externalFilters={filters}
           />
         </div>
 
-        {/* Información adicional - Mejor grid responsivo */}
+        {/* Información adicional */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Tarjeta 1: Estados de Envío */}
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 sm:p-5">
@@ -154,7 +366,7 @@ export default function ShipmentsPage() {
             </ul>
           </div>
           
-          {/* Tarjeta 3: Permisos/Escaner */}
+          {/* Tarjeta 3: Permisos */}
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 sm:p-5 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 sm:gap-3 mb-3">
               <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
