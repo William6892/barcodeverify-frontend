@@ -130,6 +130,34 @@ export interface Product {
   shipmentId: number;
 }
 
+// ==================== NUEVAS INTERFACES DE INVENTARIO ====================
+
+export interface DailyStock {
+  productId: number;
+  productName: string;
+  inicial: number;
+  salieron: number;
+  actual: number;
+}
+
+export interface StockSummary {
+  fecha: string;
+  productos: DailyStock[];
+  resumen: {
+    total_productos: number;
+    total_salidas: number;
+    productos_agotados: number;
+    stock_bajo: number;
+  };
+}
+
+export interface ProductStock {
+  productId: number;
+  productName: string;
+  currentStock: number;
+  lastUpdated: string;
+}
+
 // ============================
 // SERVICIOS DE AUTENTICACIÓN
 // ============================
@@ -363,6 +391,32 @@ export const productService = {
   
   getShipmentCategoryCounts: async (shipmentId: number) => {
     const response = await api.get(`/Product/shipment/${shipmentId}/categories`);
+    return response.data;
+  },
+};
+
+// ============================
+// 🆕 SERVICIO DE INVENTARIO (NUEVO)
+// ============================
+
+export const inventoryService = {
+  // Obtener resumen del día de hoy
+  getTodayStock: async (): Promise<StockSummary> => {
+    const response = await api.get('/Product/stock/today');
+    return response.data;
+  },
+  
+  // Obtener stock de un producto específico
+  getProductStock: async (productId: number): Promise<ProductStock> => {
+    const response = await api.get(`/Product/stock/${productId}`);
+    return response.data;
+  },
+  
+  // Forzar actualización (evitar caché)
+  refreshStock: async (): Promise<StockSummary> => {
+    const response = await api.get('/Product/stock/today', {
+      params: { _t: Date.now() }
+    });
     return response.data;
   },
 };
@@ -721,6 +775,7 @@ export default {
   authService,
   shipmentService,
   productService,
+  inventoryService,  // ✅ NUEVO
   transportService,
   driverService,
   vehicleService,

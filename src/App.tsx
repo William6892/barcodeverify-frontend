@@ -11,6 +11,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import Layout from './components/layout/Layout';
+import InventoryPage from './pages/InventoryPage';  // ✅ CORREGIDO: estaba con '.../pages'
 import TransportCompaniesPage from './pages/TransportCompaniesPage';
 
 const queryClient = new QueryClient();
@@ -40,6 +41,9 @@ function App() {
               <Route path="/shipments" element={<ShipmentsPage />} />
               <Route path="/transportadoras" element={<TransportCompaniesPage />} />
               <Route path="/scanner" element={<ScannerPage />} />
+              
+              {/* ✅ NUEVA RUTA: Inventario */}
+              <Route path="/inventory" element={<InventoryPage />} />
               
               {/* Opcional: Rutas para perfil y ayuda */}
               <Route path="/profile" element={<div>Perfil del usuario</div>} />

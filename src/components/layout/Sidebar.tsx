@@ -7,7 +7,8 @@ import {
   Truck,     
   Users,     
   User,      
-  Bell,      
+  Bell,
+  Boxes,      // 🆕 Icono para inventario
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,6 +20,7 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
   const adminItems = [
     { to: '/admin', icon: BarChart, label: 'Dashboard' }, 
     { to: '/shipments', icon: Package, label: 'Envíos' },
+    { to: '/inventory', icon: Boxes, label: 'Inventario' },  // 🆕 NUEVO
     { to: '/transportadoras', icon: Truck, label: 'Transportadoras' },
     { to: '/scanner', icon: Camera, label: 'Escanear' },
     { to: '/users', icon: Users, label: 'Usuarios' },
@@ -28,6 +30,7 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
   const userItems = [
     { to: '/scanner', icon: Camera, label: 'Escanear' }, 
     { to: '/shipments', icon: Package, label: 'Envíos' },
+    { to: '/inventory', icon: Boxes, label: 'Inventario' },  // 🆕 NUEVO
     { to: '/transportadoras', icon: Truck, label: 'Transportadoras' },
     { to: '/profile', icon: User, label: 'Mi Perfil' },
     { to: '/notifications', icon: Bell, label: 'Notificaciones' },
@@ -37,7 +40,7 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
   const navItems = isAdmin ? adminItems : userItems;
 
   return (
-    <aside className="w-64 bg-white border-r min-h-screen p-4">
+    <aside className="w-64 bg-white border-r min-h-screen p-4 flex flex-col">
       {/* Logo */}
       <div className="p-4 mb-6">
         <div className="flex items-center gap-3">
@@ -46,13 +49,13 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">Sistema de Escaneo</h1>
-            <p className="text-sm text-gray-500"> de Seguridad Samcol</p>
+            <p className="text-sm text-gray-500">de Seguridad Samcol</p>
           </div>
         </div>
       </div>
 
       {/* Navegación principal */}
-      <nav className="space-y-1">
+      <nav className="flex-1 space-y-1">
         <p className="text-xs font-medium text-gray-500 uppercase px-4 py-2">
           {isAdmin ? 'Administración' : 'Navegación Principal'}
         </p>
@@ -80,19 +83,19 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
       <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-            <Camera className="w-4 h-4 text-primary-600" />
+            <Boxes className="w-4 h-4 text-primary-600" />
           </div>
           <h3 className="font-semibold text-gray-900">Consejo Rápido</h3>
         </div>
         <p className="text-sm text-gray-600">
           {isAdmin 
-            ? 'Revisa el dashboard diariamente para estadísticas actualizadas.' 
-            : 'Usa un lector USB para escanear códigos de barras rápidamente.'}
+            ? 'Revisa el inventario diario para controlar las salidas de producto.' 
+            : 'Consulta el inventario para saber el stock actual de cada producto.'}
         </p>
       </div>
 
       {/* Información de versión */}
-      <div className="mt-auto pt-6 border-t border-gray-200">
+      <div className="mt-4 pt-4 border-t border-gray-200">
         <p className="text-xs text-gray-500 text-center">
           Seguridad Samcol v1.0.0 • © 2026
         </p>

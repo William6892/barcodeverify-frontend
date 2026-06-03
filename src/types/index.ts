@@ -1,4 +1,4 @@
-// types/index.ts - VERSIÓN CORREGIDA
+// types/index.ts - VERSIÓN COMPLETA CON INVENTARIO
 
 export interface User {
   id: number;
@@ -74,4 +74,44 @@ export interface ScanOperation {
   startTime: string;
   endTime?: string;
   status: string;
+}
+
+// ==================== NUEVOS TIPOS DE INVENTARIO ====================
+
+export interface DailyStock {
+  productId: number;
+  productName: string;
+  inicial: number;
+  salieron: number;
+  actual: number;
+}
+
+export interface StockSummary {
+  fecha: string;
+  productos: DailyStock[];
+  resumen: {
+    total_productos: number;
+    total_salidas: number;
+    productos_agotados: number;
+    stock_bajo: number;
+  };
+}
+
+export interface ProductStock {
+  productId: number;
+  productName: string;
+  currentStock: number;
+  lastUpdated: string;
+}
+
+export interface InventoryTransaction {
+  id: number;
+  productId: number;
+  type: 'IN' | 'OUT';
+  quantity: number;
+  referenceId?: number;
+  referenceType?: string;
+  notes?: string;
+  createdAt: string;
+  userId?: number;
 }
