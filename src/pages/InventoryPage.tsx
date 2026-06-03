@@ -1,7 +1,7 @@
 // pages/InventoryPage.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Boxes, Package, AlertCircle, Filter, X, Calendar, 
+  Boxes, Package, AlertCircle, Filter, X,
   TrendingDown, TrendingUp, CircleOff, Search, RefreshCw
 } from 'lucide-react';
 import { inventoryService } from '../services/api';
